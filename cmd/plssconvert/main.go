@@ -28,15 +28,21 @@ Usage:
   plssconvert utm --zone 13 --hemisphere N --easting E --northing N
   plssconvert plss --state CO --meridian 06 --township 1N --range 70W --section 30
   plssconvert plss --id CO060010N0700W0SN300ASWSE --layer intersected
+  plssconvert data download --state NV --out data/nevada.sqlite
+  plssconvert data info --db data/nevada.sqlite
+  plssconvert data unlocated --db data/nevada.sqlite
+  plssconvert latlon --value "39.5296,-119.8138" --db data/nevada.sqlite
 
-Coordinate commands output DD, DDM, DMS, and WGS84 UTM. Add --plss for live
-BLM lookup. PLSS areas produce an approximate interior representative point.
-Run a command with --help to see its flags. No network is needed without PLSS.
+Coordinate commands output DD, DDM, DMS, ISO 6709, and WGS84 UTM. Add --plss
+for live BLM lookup, or --db PACK for entirely offline PLSS lookup.
+PLSS areas produce an approximate interior representative point.
+Run a command with --help to see its flags.
 `
 
 type options struct {
 	json, geometry, lookup bool
 	serviceURL             string
+	database               string
 	timeout                time.Duration
 }
 
@@ -57,9 +63,10 @@ type result struct {
 }
 
 type output struct {
-	Results  []result `json:"results"`
-	Warnings []string `json:"warnings,omitempty"`
-	Source   string   `json:"source,omitempty"`
+	Results     []result           `json:"results"`
+	Warnings    []string           `json:"warnings,omitempty"`
+	Source      string             `json:"source,omitempty"`
+	OfflinePack *plss.PackMetadata `json:"offline_pack,omitempty"`
 }
 
 func main() {
@@ -73,6 +80,7 @@ func commonFlags(fs *flag.FlagSet, o *options, lookup bool) {
 	fs.BoolVar(&o.json, "json", false, "write structured JSON")
 	fs.BoolVar(&o.geometry, "geometry", false, "include PLSS polygon rings in JSON (longitude, latitude)")
 	fs.StringVar(&o.serviceURL, "service-url", "", "override the BLM ArcGIS MapServer URL")
+	fs.StringVar(&o.database, "db", "", "use a local PLSS pack with no network access; implies --plss")
 	fs.DurationVar(&o.timeout, "timeout", 30*time.Second, "total PLSS request timeout, e.g. 30s")
 	if lookup {
 		fs.BoolVar(&o.lookup, "plss", false, "look up containing PLSS areas using BLM (requires internet)")
@@ -85,6 +93,9 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	command := args[0]
+	if command == "data" {
+		return runData(args[1:], stdout, stderr)
+	}
 	if command != "latlon" && command != "utm" && command != "plss" {
 		return fmt.Errorf("unknown command %q; run plssconvert --help", command)
 	}
@@ -137,16 +148,39 @@ func run(args []string, stdout, stderr io.Writer) error {
 	if o.geometry && !o.json {
 		return errors.New("--geometry requires --json")
 	}
+	if o.database != "" && o.serviceURL != "" {
+		return errors.New("--db and --service-url cannot be combined; local packs never access the network")
+	}
 	visited := map[string]bool{}
 	fs.Visit(func(f *flag.Flag) { visited[f.Name] = true })
 	ctx, cancel := context.WithTimeout(context.Background(), o.timeout)
 	defer cancel()
-	client := plss.NewClient()
-	if o.serviceURL != "" {
-		client.BaseURL = o.serviceURL
-	}
-	client.HTTPClient = &http.Client{Timeout: o.timeout}
 	out := output{}
+	var client plss.Provider
+	var source string
+	if o.database != "" {
+		pack, err := plss.OpenPack(o.database)
+		if err != nil {
+			return err
+		}
+		defer pack.Close()
+		metadata, err := pack.Metadata()
+		if err != nil {
+			return err
+		}
+		out.OfflinePack = &metadata
+		source = metadata.Source
+		client = pack
+		o.lookup = true
+	} else {
+		remote := plss.NewClient()
+		if o.serviceURL != "" {
+			remote.BaseURL = o.serviceURL
+		}
+		remote.HTTPClient = &http.Client{Timeout: o.timeout}
+		client = remote
+		source = remote.BaseURL
+	}
 	var p coord.Point
 	var err error
 	switch command {
@@ -210,7 +244,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 		if len(matches) == 0 {
 			return errors.New("no matching PLSS areas in the BLM dataset")
 		}
-		out.Source = client.BaseURL
+		out.Source = source
 		out.Warnings = append(out.Warnings, "PLSS identifies an area. Coordinates are approximate interior representative points, not survey corners or legal boundary determinations.")
 		for _, m := range matches {
 			p = coord.Point{Latitude: m.Representative.Latitude, Longitude: m.Representative.Longitude}
@@ -241,7 +275,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 		if len(r.PLSS) == 0 {
 			return errors.New("no PLSS coverage at this coordinate in the BLM dataset")
 		}
-		out.Source = client.BaseURL
+		out.Source = source
 		if !o.geometry {
 			for i := range r.PLSS {
 				r.PLSS[i].Geometry = plss.Geometry{}
@@ -317,6 +351,11 @@ func writeOutput(w io.Writer, out output, asJSON bool) error {
 	}
 	if out.Source != "" {
 		if _, err := fmt.Fprintln(w, "Source: Bureau of Land Management —", out.Source); err != nil {
+			return err
+		}
+	}
+	if out.OfflinePack != nil {
+		if _, err := fmt.Fprintf(w, "Offline data: %s pack, created %s\n", out.OfflinePack.State, out.OfflinePack.CreatedAt); err != nil {
 			return err
 		}
 	}

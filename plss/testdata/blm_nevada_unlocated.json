@@ -1,0 +1,60 @@
+{
+  "features": [
+    {
+      "attributes": {
+        "OBJECTID": 7362838,
+        "STATEABBR": "NV",
+        "PRINMERCD": "21",
+        "PRINMER": "Mount Diablo Meridian",
+        "TWNSHPNO": "005",
+        "TWNSHPFRAC": "0",
+        "TWNSHPDIR": "N",
+        "RANGENO": "028",
+        "RANGEFRAC": "0",
+        "RANGEDIR": "E",
+        "TWNSHPDPCD": "0",
+        "PLSSID": "NV210050N0280E0",
+        "STEWARD": "BLM Cadastral - NV",
+        "TWNSHPLAB": "5N 28E",
+        "FRSTDIVID": "NV210050N0280E0SN190",
+        "FRSTDIVTYP": "SN",
+        "FRSTDIVTXT": "Section",
+        "FRSTDIVNO": "19",
+        "FRSTDIVDUP": "0",
+        "FRSTDIVLAB": "19",
+        "SECDIVID": "NV210050N0280E0SN190V6",
+        "SECDIVTYP": "V",
+        "SECDIVNO": "6",
+        "SECDIVSUF": null,
+        "SECDIVNOTE": "Requires Survey",
+        "SECDIVLAB": "L 6",
+        "SURVTYP": null,
+        "SURVNO": null,
+        "SURVSUF": null,
+        "SURVNOTE": null,
+        "SURVLAB": null,
+        "QSEC": "",
+        "QQSEC": null,
+        "GOVLOT": null,
+        "SECDIVTXT": "Remainder Lot",
+        "SURVID": null,
+        "SURVTYPTXT": null,
+        "SRVNAME": null,
+        "SURVDIV": null,
+        "SOURCEREF": null,
+        "SOURCEDATE": null,
+        "RECRDAREATX": "67.1 Acres",
+        "RECRDAREANO": 67.1,
+        "GISACRE": 0.0,
+        "REVISEDDATE": 1729122006000,
+        "SHAPE.STArea()": null,
+        "SHAPE.STLength()": null
+      }
+    }
+  ],
+  "geometryType": "esriGeometryPolygon",
+  "spatialReference": {
+    "wkid": 102100,
+    "latestWkid": 3857
+  }
+}

@@ -14,9 +14,11 @@ The metadata describes a national compilation of rectangular and nonrectangular 
 
 Suggested attribution for exported results: **“PLSS data: Bureau of Land Management, National PLSS Public Land Survey System Polygons; accessed YYYY-MM-DD. Representative points calculated by PLSconvertmyPLSS.”** Describe any additional changes you make to the data and do not imply BLM endorsement.
 
-BLM's [GIS Data page](https://www.blm.gov/services/geospatial/GISData) directs users to its Hub for downloads. Formats vary by item and can include File Geodatabase, Shapefile and GeoJSON. This repository does not bundle a national dataset, cache one locally or currently ingest offline downloads; it requests the relevant published features on demand.
+BLM's [GIS Data page](https://www.blm.gov/services/geospatial/GISData) directs users to its Hub for downloads. Formats vary by item and can include File Geodatabase, Shapefile and GeoJSON. The app can query features on demand or build an [offline Nevada SQLite pack](offline-nevada.md) directly from the public REST service. It does not bundle the national dataset or import arbitrary Hub download formats. Full downloaded packs are excluded from Git.
 
 The small regression fixture [`plss/testdata/blm_boulder.json`](../plss/testdata/blm_boulder.json) contains a BLM response fetched October 27, 2026 for latitude `40.015`, longitude `-105.2705`. Its feature attributes and polygon rings are preserved; unrelated response field metadata was omitted. Credit: Bureau of Land Management. The fixture is test input, not an offline coverage dataset.
+
+The fixture [`plss/testdata/blm_nevada_unlocated.json`](../plss/testdata/blm_nevada_unlocated.json) preserves the attributes returned by a native-coordinate layer `3` query for object ID `7362838` on October 27, 2026. BLM marks this remainder lot “Requires Survey” and supplies no polygon geometry. Unrelated field definitions were omitted. Credit: Bureau of Land Management.
 
 ## Endpoint migration
 
@@ -48,4 +50,12 @@ For coordinate-to-PLSS, the app asks which published polygons intersect a point.
 
 For PLSS-to-coordinate, the app returns the matching feature and a calculated point within that feature. A description may match more than one published polygon. Representative points are convenient for display or subsequent UTM conversion, but they are not surveyed monuments, parcel corners or evidence of ownership. Request JSON geometry to retain the actual published boundary alongside the point.
 
-The default service is public and needs no API key. PLSS requests require internet access and depend on BLM availability. A timeout, HTTP failure or no-match result should be handled as a failed lookup, not an authoritative statement about whether surveyed land exists.
+The default service is public and needs no API key. Live PLSS requests and pack downloads require internet access and depend on BLM availability. With `--db`, lookups use only the selected local pack and do not fall back to the network. A timeout, HTTP failure or no-match result should be handled as a failed lookup, not an authoritative statement about whether surveyed land exists.
+
+## Offline snapshot provenance
+
+Nevada packs contain records whose published `PLSSID` begins with `NV` from layers 1, 2 and 3. The downloader captures object-ID lists, requests all listed records, and checks that every expected record was received before publishing the pack. It preserves the returned attributes and available WGS 84 polygon coordinates without geometry simplification or a requested precision reduction.
+
+Some published records have no geometry. The downloader rechecks these in the service's native coordinate system to distinguish absent source geometry from a projection failure. Confirmed records without geometry are kept separately with their attributes and a reason, and are included in `unlocated_counts` rather than the usable-polygon `counts`. They are available through `data unlocated`, but cannot be spatially matched or converted to a representative coordinate. Malformed nonempty geometry remains an import error. No polygon is invented to make an absent source boundary locatable.
+
+The source is a mutable service, so this procedure is not a transactionally consistent BLM archive from a single instant. A pack's creation timestamp describes the local build, not the date of a cadastral survey or a guarantee that every record is current. Newer live results can differ. See [offline Nevada coverage and refreshes](offline-nevada.md#coverage-and-freshness) for the distinction between complete retrieval of source records and complete geographic coverage.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -119,6 +120,24 @@ func TestFindIDPaginationEscapes(t *testing.T) {
 	m, err := c.FindID(context.Background(), "division", "test'id")
 	if err != nil || len(m) != 2 || calls != 2 {
 		t.Fatalf("pagination: %v %v %d", m, err, calls)
+	}
+}
+
+func TestFindPaddedLotMatchesUnpaddedSource(t *testing.T) {
+	c := testServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/1/query" {
+			polygonResponse(w, map[string]any{"PLSSID": "CO060010N0700W0"}, false)
+			return
+		}
+		if !strings.Contains(r.URL.Query().Get("where"), "'1'") {
+			fmt.Fprint(w, `{"features":[]}`)
+			return
+		}
+		polygonResponse(w, map[string]any{"PLSSID": "CO060010N0700W0", "SECDIVTYP": "L", "SECDIVNO": "1", "GOVLOT": "1"}, false)
+	})
+	matches, err := c.Find(context.Background(), Description{State: "CO", Meridian: "06", Township: 1, TownshipDirection: "N", Range: 70, RangeDirection: "W", Section: 30, Lot: "01"})
+	if err != nil || len(matches) != 1 {
+		t.Fatalf("zero-padded lot should match source lot 1: %v %v", matches, err)
 	}
 }
 

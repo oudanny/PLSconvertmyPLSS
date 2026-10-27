@@ -14,13 +14,19 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        go: [stable]
+        include:
+          - os: ubuntu-latest
+            go: '1.26.x'
     runs-on: ${{ matrix.os }}
+    env:
+      CGO_ENABLED: '0'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: stable
-          cache: false
+          go-version: ${{ matrix.go }}
+          cache: true
       - name: Test
         run: go test ./...
       - name: Vet

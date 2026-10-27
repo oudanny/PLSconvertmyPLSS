@@ -1,5 +1,10 @@
 /bin/
 /dist/
+/data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.exe
 *.test
 coverage.out

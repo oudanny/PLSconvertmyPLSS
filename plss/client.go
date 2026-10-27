@@ -158,7 +158,7 @@ func (c *Client) Find(ctx context.Context, d Description) ([]Match, error) {
 		layer = 3
 		lotValues := []string{quote(d.Lot)}
 		if n, e := strconv.Atoi(d.Lot); e == nil {
-			lotValues = append(lotValues, quote(fmt.Sprintf("%02d", n)), quote(fmt.Sprintf("%03d", n)))
+			lotValues = append(lotValues, quote(strconv.Itoa(n)), quote(fmt.Sprintf("%02d", n)), quote(fmt.Sprintf("%03d", n)))
 		}
 		in := strings.Join(lotValues, ",")
 		where += " AND ((SECDIVTYP='L' AND SECDIVNO IN (" + in + ")) OR GOVLOT IN (" + in + "))"

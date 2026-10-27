@@ -6,13 +6,13 @@ A Go command-line app and reusable library for converting latitude/longitude and
 - UTM: WGS 84, northern and southern hemispheres, with Norway and Svalbard zone exceptions.
 - PLSS: township/range/section, available aliquot subdivisions and government lots, or exact BLM identifiers.
 - Plain-text or JSON output, with optional polygon geometry.
-- Coordinate conversions run offline. PLSS queries use BLM's public REST service; no API key or local dataset is required.
+- Coordinate conversions run offline. PLSS queries can use BLM's public REST service or a local Nevada data pack; no API key is required.
 
 PLSS describes an **area**, so converting PLSS to latitude/longitude returns a representative point inside a published polygon. It is not a surveyed corner or a unique coordinate for the land description. Coordinate-to-PLSS results depend on published coverage and may include multiple matches on boundaries.
 
 ## Install
 
-Requires Go 1.24 or newer. There are no third-party Go dependencies.
+Requires Go 1.26 or newer. SQLite support uses the pure-Go `modernc.org/sqlite` driver; no C compiler, CGO or separate SQLite installation is required.
 
 ```sh
 go install github.com/oudanny/PLSconvertmyPLSS/cmd/plssconvert@latest
@@ -68,6 +68,21 @@ plssconvert plss --layer division --id CO060010N0700W0SN300ASWSE --json --geomet
 For exact IDs, `--layer` accepts `township` (`PLSSID`), `section` (`FRSTDIVID`), `division` / `intersected` (`SECDIVID`), or `survey` (`SURVID`). Omit `--section` in a structured query to request a township. `--township-fraction` and `--range-fraction` accept the source's one-digit BLM fraction codes, defaulting to `0`.
 
 Run `plssconvert <command> --help` for all flags. Place flags after the command. Quote coordinate strings containing spaces or symbols. `--json` produces machine-readable output; `--geometry` includes rings with coordinates ordered **longitude, latitude** and requires `--json`. `--timeout` controls the online request deadline, and `--service-url` can point to a compatible ArcGIS service.
+
+## Offline Nevada PLSS
+
+Download Nevada's published townships, sections and intersected subdivisions once, then use the resulting SQLite pack without a network connection:
+
+```sh
+plssconvert data download --state NV --out data/nevada.sqlite
+plssconvert data info --db data/nevada.sqlite
+plssconvert data unlocated --db data/nevada.sqlite --json
+plssconvert latlon --value '39.5296,-119.8138' --db data/nevada.sqlite --json
+```
+
+`--db` also works with `utm` and `plss`. On coordinate commands it implies a PLSS lookup, so `--plss` is optional. It selects local data exclusively: a missing match or invalid pack returns an error without trying the online service. `--db` and `--service-url` cannot be combined.
+
+Packs retain published attributes and available geometry, use a spatial index to narrow candidates, and test the actual polygons for containment. Source records without geometry are preserved separately for inspection with `data unlocated`; they cannot produce a spatial match or representative coordinate. Each pack records its source, creation time, usable-polygon counts and unlocated-record counts. It is a dated copy of the available source records; it does not fill gaps in BLM's coverage. Downloading requires internet access, can take substantial time, and never overwrites an existing pack. See [the offline Nevada guide](docs/offline-nevada.md) for download options, refreshes, coverage and performance measurement.
 
 ## Coordinate conventions
 
@@ -135,6 +150,8 @@ for _, match := range matches {
 
 The snippet belongs inside a function returning `error` and uses imports `context`, `fmt`, `time`, and `github.com/oudanny/PLSconvertmyPLSS/plss`. `Find(ctx, plss.Description{...})` accepts a structured description; `FindID(ctx, "division", id)` accepts an exact identifier. Each match retains the original BLM attributes and polygon, the representative point, the source service and the resolution layer. `Lookup` tries intersected polygons, then sections, then townships, and reports the layer it found. Preserve all returned matches.
 
+For offline queries, `plss.OpenPack(path)` returns a local provider with the same `Lookup`, `Find` and `FindID` methods. Close it when finished. Both the HTTP client and local pack implement `plss.Provider`; see the [offline library example](docs/offline-nevada.md#go-library).
+
 ## Data source and accuracy
 
 PLSS data comes from the [BLM National PLSS Public Land Survey System Polygons dataset](https://gbp-blm-egis.hub.arcgis.com/datasets/283939812bc34c11bad695a1c8152faf/about). BLM identifies these data as public domain and requests attribution. Its published GIS data have varying accuracy and completeness and are not legal land surveys. See [data sources and limitations](docs/data-sources.md) for the service URL, provenance, available layers and download information.
@@ -149,4 +166,4 @@ go vet ./...
 go build ./cmd/plssconvert
 ```
 
-Unit tests use local HTTP fixtures for PLSS, so normal test runs do not depend on the live BLM service. GitHub Actions runs tests, vet and builds on Linux, Windows and macOS.
+Unit tests use local HTTP fixtures and small generated packs, so normal test runs do not depend on the live BLM service or a full Nevada download. GitHub Actions runs tests, vet and builds on Linux, Windows and macOS, including the minimum supported Go version on Linux. The full downloaded data packs are excluded from Git.
