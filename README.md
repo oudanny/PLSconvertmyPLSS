@@ -152,6 +152,8 @@ The snippet belongs inside a function returning `error` and uses imports `contex
 
 For offline queries, `plss.OpenPack(path)` returns a local provider with the same `Lookup`, `Find` and `FindID` methods. Close it when finished. Both the HTTP client and local pack implement `plss.Provider`; see the [offline library example](docs/offline-nevada.md#go-library).
 
+The portability target is one desktop executable plus one local data file, with western-US coverage as the longer-term goal. See [measured size, lookup performance and compact-format experiments](docs/performance.md). Nevada is currently the supported download region.
+
 ## Data source and accuracy
 
 PLSS data comes from the [BLM National PLSS Public Land Survey System Polygons dataset](https://gbp-blm-egis.hub.arcgis.com/datasets/283939812bc34c11bad695a1c8152faf/about). BLM identifies these data as public domain and requests attribution. Its published GIS data have varying accuracy and completeness and are not legal land surveys. See [data sources and limitations](docs/data-sources.md) for the service URL, provenance, available layers and download information.

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -558,26 +557,9 @@ func (p *Pack) queryPack(ctx context.Context, layer int, where string, args ...a
 		if err := rows.Scan(&storedLayer, &point.Latitude, &point.Longitude, &data); err != nil {
 			return nil, fmt.Errorf("read offline feature: %w", err)
 		}
-		reader, err := zlib.NewReader(bytes.NewReader(data))
+		feature, err := decodePackFeature(data)
 		if err != nil {
-			return nil, fmt.Errorf("corrupt offline feature: %w", err)
-		}
-		raw, err := io.ReadAll(io.LimitReader(reader, maxPackFeatureBytes+1))
-		closeErr := reader.Close()
-		if err != nil {
-			return nil, fmt.Errorf("corrupt offline feature: %w", err)
-		}
-		if closeErr != nil {
-			return nil, fmt.Errorf("corrupt offline feature: %w", closeErr)
-		}
-		if len(raw) > maxPackFeatureBytes {
-			return nil, errors.New("offline feature exceeds 64 MiB")
-		}
-		var feature packFeature
-		decoder := json.NewDecoder(bytes.NewReader(raw))
-		decoder.UseNumber()
-		if err := decoder.Decode(&feature); err != nil {
-			return nil, fmt.Errorf("corrupt offline feature JSON: %w", err)
+			return nil, err
 		}
 		if feature.Attributes == nil || !finite(point.Latitude) || !finite(point.Longitude) || point.Latitude < -90 || point.Latitude > 90 || point.Longitude < -180 || point.Longitude > 180 {
 			return nil, errors.New("corrupt offline feature attributes or representative")

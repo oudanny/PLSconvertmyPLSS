@@ -3,7 +3,9 @@ package plss_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"sort"
@@ -118,6 +120,129 @@ func BenchmarkNevadaLookup(b *testing.B) {
 		p := nevadaPoints[i%len(nevadaPoints)]
 		if _, err := pack.Lookup(ctx, p.lat, p.lon); err != nil {
 			b.Fatal(err)
+		}
+	}
+}
+
+// These sub-benchmarks keep a pack open and warm each point before timing.
+// They expose variation hidden by a single average over ten cities, including
+// a miss that exercises all three layer fallbacks. No network is accessed.
+func BenchmarkNevadaLookupLocations(b *testing.B) {
+	path := os.Getenv("PLSS_NEVADA_PACK")
+	if path == "" {
+		b.Skip("set PLSS_NEVADA_PACK to benchmark a complete real pack")
+	}
+	points := append([]struct {
+		name     string
+		lat, lon float64
+	}{}, nevadaPoints...)
+	points = append(points, struct {
+		name     string
+		lat, lon float64
+	}{"Outside_pack", 40, -124})
+	for _, point := range points {
+		b.Run(point.name, func(b *testing.B) {
+			pack, err := plss.OpenPack(path)
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer pack.Close()
+			ctx := context.Background()
+			initial, initialErr := pack.Lookup(ctx, point.lat, point.lon)
+			if initialErr != nil && !errors.Is(initialErr, plss.ErrNotFound) {
+				b.Fatal(initialErr)
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				matches, err := pack.Lookup(ctx, point.lat, point.lon)
+				if (err != nil && !errors.Is(err, plss.ErrNotFound)) || len(matches) != len(initial) {
+					b.Fatalf("lookup changed: %d matches, %v", len(matches), err)
+				}
+			}
+			b.ReportMetric(float64(len(initial)), "matches/op")
+		})
+	}
+}
+
+// Spread measures a repeatable 512-point workload across Nevada's approximate
+// bounding rectangle. Some points fall outside the state or published PLSS
+// coverage, and therefore exercise the no-match path. The first pass warms the
+// workload's OS/database pages; this does not measure a cold disk cache.
+func BenchmarkNevadaLookupSpread(b *testing.B) {
+	path := os.Getenv("PLSS_NEVADA_PACK")
+	if path == "" {
+		b.Skip("set PLSS_NEVADA_PACK to benchmark a complete real pack")
+	}
+	pack, err := plss.OpenPack(path)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer pack.Close()
+	rng := rand.New(rand.NewSource(21406))
+	points := make([]plss.Point, 512)
+	for i := range points {
+		points[i] = plss.Point{Latitude: 35 + 7*rng.Float64(), Longitude: -120 + 6*rng.Float64()}
+	}
+	ctx := context.Background()
+	hits := 0
+	for _, point := range points {
+		matches, err := pack.Lookup(ctx, point.Latitude, point.Longitude)
+		if err != nil && !errors.Is(err, plss.ErrNotFound) {
+			b.Fatal(err)
+		}
+		if len(matches) > 0 {
+			hits++
+		}
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		point := points[i%len(points)]
+		if _, err := pack.Lookup(ctx, point.Latitude, point.Longitude); err != nil && !errors.Is(err, plss.ErrNotFound) {
+			b.Fatal(err)
+		}
+	}
+	b.ReportMetric(float64(hits)/float64(len(points)), "hit_fraction")
+}
+
+// OpenLookupWarmOSCache includes opening/validating the database and closing it
+// for every lookup, unlike the persistent-open benchmarks. OS caches are warmed
+// first; neither process startup nor physical cold-storage latency is measured.
+func BenchmarkNevadaOpenLookupWarmOSCache(b *testing.B) {
+	path := os.Getenv("PLSS_NEVADA_PACK")
+	if path == "" {
+		b.Skip("set PLSS_NEVADA_PACK to benchmark a complete real pack")
+	}
+	ctx := context.Background()
+	warm, err := plss.OpenPack(path)
+	if err != nil {
+		b.Fatal(err)
+	}
+	for _, point := range nevadaPoints {
+		if _, err := warm.Lookup(ctx, point.lat, point.lon); err != nil {
+			_ = warm.Close()
+			b.Fatal(err)
+		}
+	}
+	if err := warm.Close(); err != nil {
+		b.Fatal(err)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		pack, err := plss.OpenPack(path)
+		if err != nil {
+			b.Fatal(err)
+		}
+		point := nevadaPoints[i%len(nevadaPoints)]
+		_, err = pack.Lookup(ctx, point.lat, point.lon)
+		closeErr := pack.Close()
+		if err != nil {
+			b.Fatal(err)
+		}
+		if closeErr != nil {
+			b.Fatal(closeErr)
 		}
 	}
 }

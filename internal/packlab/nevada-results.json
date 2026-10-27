@@ -1,0 +1,318 @@
+{
+  "source": "data/nevada.sqlite",
+  "go_version": "go1.27.3",
+  "sampling": "Deterministic stratified contiguous128-row blocks per layer; all byte estimates weighted by actual layer counts; codec timings exclude database I/O and use a reused zlib reader; median of3 repetitions.",
+  "schema_keys": {
+    "1": 29,
+    "2": 14,
+    "3": 47
+  },
+  "variants": [
+    {
+      "name": "current-zlib-json",
+      "block_size": 1,
+      "estimated_all_layer_blob_bytes": 920009257,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 2079.9775390625,
+          "encode_ns_per_record": 0,
+          "decode_ns_per_record": 114688.4765625,
+          "decode_alloc_bytes_per_record": 41985.265625,
+          "decode_allocs_per_record": 315.2294921875
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 504.84375,
+          "encode_ns_per_record": 0,
+          "decode_ns_per_record": 28999.12109375,
+          "decode_alloc_bytes_per_record": 9710.0234375,
+          "decode_allocs_per_record": 92.2314453125
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 613.8984375,
+          "encode_ns_per_record": 0,
+          "decode_ns_per_record": 35947.75390625,
+          "decode_alloc_bytes_per_record": 14132.6328125,
+          "decode_allocs_per_record": 139.1767578125
+        }
+      ]
+    },
+    {
+      "name": "json-default-zlib",
+      "block_size": 1,
+      "estimated_all_layer_blob_bytes": 876154007,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 2038.13671875,
+          "encode_ns_per_record": 108620.60546875,
+          "decode_ns_per_record": 113750.48828125,
+          "decode_alloc_bytes_per_record": 41807.5625,
+          "decode_allocs_per_record": 313.484375
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 483.0263671875,
+          "encode_ns_per_record": 30188.57421875,
+          "decode_ns_per_record": 27194.921875,
+          "decode_alloc_bytes_per_record": 9646.140625,
+          "decode_allocs_per_record": 90.0478515625
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 584.3154296875,
+          "encode_ns_per_record": 38429.00390625,
+          "decode_ns_per_record": 34923.2421875,
+          "decode_alloc_bytes_per_record": 14064.9140625,
+          "decode_allocs_per_record": 136.96484375
+        }
+      ]
+    },
+    {
+      "name": "binary64-zlib-fast",
+      "block_size": 1,
+      "estimated_all_layer_blob_bytes": 893240757,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 2120.8037109375,
+          "encode_ns_per_record": 72107.421875,
+          "decode_ns_per_record": 50843.9453125,
+          "decode_alloc_bytes_per_record": 19924.78125,
+          "decode_allocs_per_record": 109.7080078125
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 501.8046875,
+          "encode_ns_per_record": 36157.12890625,
+          "decode_ns_per_record": 19142.96875,
+          "decode_alloc_bytes_per_record": 4934.2265625,
+          "decode_allocs_per_record": 51.3935546875
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 594.8544921875,
+          "encode_ns_per_record": 40335.44921875,
+          "decode_ns_per_record": 31692.08984375,
+          "decode_alloc_bytes_per_record": 10985.828125,
+          "decode_allocs_per_record": 122.6904296875
+        }
+      ]
+    },
+    {
+      "name": "schema-binary64-zlib-fast",
+      "block_size": 1,
+      "estimated_all_layer_blob_bytes": 530890237,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 1898.462890625,
+          "encode_ns_per_record": 65364.6484375,
+          "decode_ns_per_record": 40692.48046875,
+          "decode_alloc_bytes_per_record": 16172.5546875,
+          "decode_allocs_per_record": 99.3232421875
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 386.9296875,
+          "encode_ns_per_record": 26764.35546875,
+          "decode_ns_per_record": 13717.1875,
+          "decode_alloc_bytes_per_record": 3945.53125,
+          "decode_allocs_per_record": 50.767578125
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 344.8720703125,
+          "encode_ns_per_record": 27191.796875,
+          "decode_ns_per_record": 20611.81640625,
+          "decode_alloc_bytes_per_record": 8061.546875,
+          "decode_allocs_per_record": 99.7626953125
+        }
+      ]
+    },
+    {
+      "name": "schema-xor-zlib-fast",
+      "block_size": 1,
+      "estimated_all_layer_blob_bytes": 540835226,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 1504.3095703125,
+          "encode_ns_per_record": 56508.203125,
+          "decode_ns_per_record": 33979.78515625,
+          "decode_alloc_bytes_per_record": 14080.4921875,
+          "decode_allocs_per_record": 85.1689453125
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 347.5341796875,
+          "encode_ns_per_record": 25756.15234375,
+          "decode_ns_per_record": 10764.94140625,
+          "decode_alloc_bytes_per_record": 3871.6484375,
+          "decode_allocs_per_record": 50.3310546875
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 356.123046875,
+          "encode_ns_per_record": 24667.08984375,
+          "decode_ns_per_record": 17653.90625,
+          "decode_alloc_bytes_per_record": 8046.6875,
+          "decode_allocs_per_record": 99.6650390625
+        }
+      ]
+    },
+    {
+      "name": "schema-binary64-zlib-default",
+      "block_size": 1,
+      "estimated_all_layer_blob_bytes": 499178127,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 1632.69140625,
+          "encode_ns_per_record": 70681.93359375,
+          "decode_ns_per_record": 29670.80078125,
+          "decode_alloc_bytes_per_record": 15521.03125,
+          "decode_allocs_per_record": 89.05859375
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 356.759765625,
+          "encode_ns_per_record": 30319.82421875,
+          "decode_ns_per_record": 12154.4921875,
+          "decode_alloc_bytes_per_record": 3938.7109375,
+          "decode_allocs_per_record": 50.5
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 325.2080078125,
+          "encode_ns_per_record": 24161.23046875,
+          "decode_ns_per_record": 17232.6171875,
+          "decode_alloc_bytes_per_record": 8061.546875,
+          "decode_allocs_per_record": 99.7626953125
+        }
+      ]
+    },
+    {
+      "name": "schema-xor-zlib-default",
+      "block_size": 1,
+      "estimated_all_layer_blob_bytes": 523257171,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 1500.232421875,
+          "encode_ns_per_record": 48978.80859375,
+          "decode_ns_per_record": 26682.2265625,
+          "decode_alloc_bytes_per_record": 14080.3203125,
+          "decode_allocs_per_record": 85.2890625
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 347.9794921875,
+          "encode_ns_per_record": 27901.5625,
+          "decode_ns_per_record": 11239.94140625,
+          "decode_alloc_bytes_per_record": 3871.546875,
+          "decode_allocs_per_record": 50.3251953125
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 343.49609375,
+          "encode_ns_per_record": 26429.4921875,
+          "decode_ns_per_record": 17185.3515625,
+          "decode_alloc_bytes_per_record": 8058.3828125,
+          "decode_allocs_per_record": 99.830078125
+        }
+      ]
+    },
+    {
+      "name": "schema-binary64-block32-zlib",
+      "block_size": 32,
+      "estimated_all_layer_blob_bytes": 196334543,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 1231.779296875,
+          "encode_ns_per_record": 40419.23828125,
+          "decode_ns_per_record": 426490.52734375,
+          "decode_alloc_bytes_per_record": 168851.0078125,
+          "decode_allocs_per_record": 88.203125
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 217.4306640625,
+          "encode_ns_per_record": 8225,
+          "decode_ns_per_record": 92573.92578125,
+          "decode_alloc_bytes_per_record": 35861.8359375,
+          "decode_allocs_per_record": 75.62109375
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 120.2822265625,
+          "encode_ns_per_record": 12800.68359375,
+          "decode_ns_per_record": 94140.0390625,
+          "decode_alloc_bytes_per_record": 48587.234375,
+          "decode_allocs_per_record": 166.6865234375
+        }
+      ]
+    },
+    {
+      "name": "schema-binary64-block128-zlib",
+      "block_size": 128,
+      "estimated_all_layer_blob_bytes": 170745728,
+      "layers": [
+        {
+          "layer": 1,
+          "sample": 1024,
+          "mean_bytes_per_record": 1197.107421875,
+          "encode_ns_per_record": 50386.81640625,
+          "decode_ns_per_record": 2019653.125,
+          "decode_alloc_bytes_per_record": 611585.3828125,
+          "decode_allocs_per_record": 104.2314453125
+        },
+        {
+          "layer": 2,
+          "sample": 1024,
+          "mean_bytes_per_record": 193.9609375,
+          "encode_ns_per_record": 7339.35546875,
+          "decode_ns_per_record": 275961.03515625,
+          "decode_alloc_bytes_per_record": 131703.4375,
+          "decode_allocs_per_record": 71.529296875
+        },
+        {
+          "layer": 3,
+          "sample": 1024,
+          "mean_bytes_per_record": 103.9091796875,
+          "encode_ns_per_record": 11391.015625,
+          "decode_ns_per_record": 215077.1484375,
+          "decode_alloc_bytes_per_record": 151062.15625,
+          "decode_allocs_per_record": 178.158203125
+        }
+      ]
+    }
+  ]
+}
