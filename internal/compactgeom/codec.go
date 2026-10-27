@@ -26,20 +26,25 @@ var magic = [8]byte{'C', 'G', 'E', 'O', 'M', '0', '1', 0}
 // Metadata describes a geometry component. Decimals=0 is bit-exact. Values6
 // and7 are explicitly lossy experiments, rounding only XY to that many places.
 type Metadata struct {
-	Features              uint32  `json:"features"`
-	Vertices              uint64  `json:"unique_xy_vertices"`
-	Decimals              uint32  `json:"quantization_decimals"`
-	BlockSize             uint32  `json:"records_per_block"`
-	Bytes                 uint64  `json:"file_bytes"`
-	VertexBytes           uint64  `json:"vertex_table_bytes"`
-	BlockBytes            uint64  `json:"compressed_record_block_bytes"`
-	DirectoryBytes        uint64  `json:"directory_bytes"`
-	MaxLatitudeError      float64 `json:"maximum_latitude_error_degrees"`
-	MaxLongitudeError     float64 `json:"maximum_longitude_error_degrees"`
-	CollapsedEdges        uint64  `json:"collapsed_nonzero_xy_edges"`
-	CollapsedRings        uint64  `json:"new_zero_area_rings"`
-	OrientationChanges    uint64  `json:"ring_orientation_changes"`
-	ExtraOrdinateVertices uint64  `json:"vertices_with_extra_ordinates"`
+	Version               uint32      `json:"version"`
+	VertexCodec           VertexCodec `json:"vertex_codec"`
+	VertexBlockSize       uint32      `json:"vertices_per_block,omitempty"`
+	RawVertexBytes        uint64      `json:"raw_vertex_bytes"`
+	VertexDirectoryBytes  uint64      `json:"vertex_directory_bytes,omitempty"`
+	Features              uint32      `json:"features"`
+	Vertices              uint64      `json:"unique_xy_vertices"`
+	Decimals              uint32      `json:"quantization_decimals"`
+	BlockSize             uint32      `json:"records_per_block"`
+	Bytes                 uint64      `json:"file_bytes"`
+	VertexBytes           uint64      `json:"vertex_table_bytes"`
+	BlockBytes            uint64      `json:"compressed_record_block_bytes"`
+	DirectoryBytes        uint64      `json:"directory_bytes"`
+	MaxLatitudeError      float64     `json:"maximum_latitude_error_degrees"`
+	MaxLongitudeError     float64     `json:"maximum_longitude_error_degrees"`
+	CollapsedEdges        uint64      `json:"collapsed_nonzero_xy_edges"`
+	CollapsedRings        uint64      `json:"new_zero_area_rings"`
+	OrientationChanges    uint64      `json:"ring_orientation_changes"`
+	ExtraOrdinateVertices uint64      `json:"vertices_with_extra_ordinates"`
 }
 
 type xy struct{ x, y uint64 }
@@ -52,27 +57,47 @@ type blockEntry struct {
 // Build memory is proportional to the vertex dictionary. Reading requires
 // only the small block directory plus one requested block and its vertices.
 type Builder struct {
-	f          *os.File
-	dictionary map[xy]uint32
-	vertices   []xy
-	entries    []blockEntry
-	records    [][]byte
-	buffer     bytes.Buffer
-	zip        *zlib.Writer
-	meta       Metadata
-	closed     bool
-	failed     error
+	f               *os.File
+	dictionary      map[xy]uint32
+	vertices        []xy
+	entries         []blockEntry
+	records         [][]byte
+	buffer          bytes.Buffer
+	zip             *zlib.Writer
+	meta            Metadata
+	closed          bool
+	failed          error
+	vertexCodec     VertexCodec
+	vertexBlockSize uint32
 }
 
 func NewBuilder(path string, decimals int) (*Builder, error) {
+	return NewBuilderWithOptions(path, BuilderOptions{Decimals: decimals})
+}
+
+// NewBuilderWithOptions enables explicitly selected dictionary compression.
+// Its zero options preserve the original lossless version1 format.
+func NewBuilderWithOptions(path string, options BuilderOptions) (*Builder, error) {
+	decimals := options.Decimals
 	if decimals != 0 && decimals != 6 && decimals != 7 {
 		return nil, errors.New("decimals must be0(lossless),6,or7")
+	}
+	if err := options.validate(); err != nil {
+		return nil, err
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
 	if err != nil {
 		return nil, err
 	}
-	b := &Builder{f: f, dictionary: make(map[xy]uint32), meta: Metadata{Decimals: uint32(decimals), BlockSize: defaultBlockSize}}
+	b := &Builder{f: f, dictionary: make(map[xy]uint32), meta: Metadata{Decimals: uint32(decimals), BlockSize: defaultBlockSize}, vertexCodec: options.VertexCodec, vertexBlockSize: uint32(options.VertexBlockSize)}
+	if b.vertexCodec != VertexRaw && b.vertexBlockSize == 0 {
+		b.vertexBlockSize = 256
+	}
+	b.meta.Version = 1
+	if b.vertexCodec != VertexRaw {
+		b.meta.Version = 2
+	}
+	b.meta.VertexCodec, b.meta.VertexBlockSize = b.vertexCodec, b.vertexBlockSize
 	b.zip, _ = zlib.NewWriterLevel(&b.buffer, zlib.DefaultCompression)
 	if _, err = f.Write(make([]byte, headerSize)); err != nil {
 		f.Close()
@@ -282,6 +307,10 @@ func (b *Builder) Snapshot() Metadata {
 
 // Finish writes the direct vertex table and block directory, syncs, and closes.
 func (b *Builder) Finish() (Metadata, error) {
+	return b.finish(uint64(len(b.vertices)), func(id uint32) (xy, error) { return b.vertices[id], nil })
+}
+
+func (b *Builder) finish(vertexCount uint64, at func(uint32) (xy, error)) (Metadata, error) {
 	if b.closed {
 		return Metadata{}, errors.New("builder closed")
 	}
@@ -295,53 +324,47 @@ func (b *Builder) Finish() (Metadata, error) {
 	if err != nil {
 		return Metadata{}, err
 	}
-	buf := make([]byte, 0, 64<<10)
 	width := 16
 	if b.meta.Decimals != 0 {
 		width = 8
 	}
-	for _, v := range b.vertices {
-		if width == 16 {
-			buf = binary.LittleEndian.AppendUint64(buf, v.x)
-			buf = binary.LittleEndian.AppendUint64(buf, v.y)
-		} else {
-			buf = binary.LittleEndian.AppendUint32(buf, uint32(v.x))
-			buf = binary.LittleEndian.AppendUint32(buf, uint32(v.y))
-		}
-		if len(buf) >= 64<<10 {
-			if _, err := b.f.Write(buf); err != nil {
-				return Metadata{}, err
-			}
-			buf = buf[:0]
-		}
+	vertexEntries, err := b.writeVertices(vertexCount, width, at)
+	if err != nil {
+		return Metadata{}, err
 	}
-	if _, err := b.f.Write(buf); err != nil {
+	vertexEnd, err := b.f.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return Metadata{}, err
+	}
+	if err := writeDirectory(b.f, vertexEntries); err != nil {
 		return Metadata{}, err
 	}
 	directoryOffset, err := b.f.Seek(0, io.SeekCurrent)
 	if err != nil {
 		return Metadata{}, err
 	}
-	for _, e := range b.entries {
-		var encoded [16]byte
-		binary.LittleEndian.PutUint64(encoded[:8], e.offset)
-		binary.LittleEndian.PutUint32(encoded[8:12], e.compressed)
-		binary.LittleEndian.PutUint32(encoded[12:], e.raw)
-		if _, err := b.f.Write(encoded[:]); err != nil {
-			return Metadata{}, err
-		}
+	if err := writeDirectory(b.f, b.entries); err != nil {
+		return Metadata{}, err
 	}
 	end, err := b.f.Seek(0, io.SeekCurrent)
 	if err != nil {
 		return Metadata{}, err
 	}
-	b.meta.Vertices = uint64(len(b.vertices))
-	b.meta.VertexBytes = b.meta.Vertices * uint64(width)
-	b.meta.DirectoryBytes = uint64(len(b.entries)) * 16
+	b.meta.Version = 1
+	if b.vertexCodec != VertexRaw {
+		b.meta.Version = 2
+	}
+	b.meta.VertexCodec = b.vertexCodec
+	b.meta.VertexBlockSize = b.vertexBlockSize
+	b.meta.Vertices = vertexCount
+	b.meta.RawVertexBytes = vertexCount * uint64(width)
+	b.meta.VertexBytes = uint64(vertexEnd - vertexOffset)
+	b.meta.VertexDirectoryBytes = uint64(len(vertexEntries)) * 16
+	b.meta.DirectoryBytes = uint64(len(b.entries))*16 + b.meta.VertexDirectoryBytes
 	b.meta.Bytes = uint64(end)
 	header := make([]byte, headerSize)
 	copy(header, magic[:])
-	binary.LittleEndian.PutUint32(header[8:12], 1)
+	binary.LittleEndian.PutUint32(header[8:12], b.meta.Version)
 	binary.LittleEndian.PutUint32(header[12:16], b.meta.Decimals)
 	binary.LittleEndian.PutUint32(header[16:20], b.meta.Features)
 	binary.LittleEndian.PutUint32(header[20:24], b.meta.BlockSize)
@@ -357,6 +380,11 @@ func (b *Builder) Finish() (Metadata, error) {
 	binary.LittleEndian.PutUint64(header[88:96], b.meta.CollapsedRings)
 	binary.LittleEndian.PutUint64(header[96:104], b.meta.ExtraOrdinateVertices)
 	binary.LittleEndian.PutUint64(header[104:112], b.meta.OrientationChanges)
+	if b.meta.Version == 2 {
+		binary.LittleEndian.PutUint32(header[112:116], b.vertexBlockSize)
+		binary.LittleEndian.PutUint32(header[116:120], uint32(b.vertexCodec))
+		binary.LittleEndian.PutUint64(header[120:128], uint64(vertexEnd))
+	}
 	if _, err := b.f.WriteAt(header, 0); err != nil {
 		return Metadata{}, err
 	}
@@ -385,24 +413,30 @@ func (b *Builder) Close() error {
 // embedded component). Only the block directory is resident. Record is safe
 // for concurrent calls; the caller keeps the backing file alive.
 type Reader struct {
-	r            io.ReaderAt
-	meta         Metadata
-	vertexOffset uint64
-	vertexWidth  uint32
-	entries      []blockEntry
-	pool         sync.Pool
-	vertexPages  *byteCache
-	blocks       *byteCache
-	vertexData   []byte
+	r             io.ReaderAt
+	meta          Metadata
+	vertexOffset  uint64
+	vertexWidth   uint32
+	entries       []blockEntry
+	pool          sync.Pool
+	vertexPages   *byteCache
+	blocks        *byteCache
+	vertexData    []byte
+	vertexEntries []blockEntry
+	vertexBlocks  *byteCache
+	vertexPool    sync.Pool
 }
 
-// ReaderOptions bounds component caches. Each vertex page is4096bytes; decoded
-// blocks vary with source complexity. Zero capacities disable those caches.
-// PreloadVertices uses exactly Metadata.VertexBytes additional payload RAM.
+// ReaderOptions bounds independent component caches. Raw vertex pages are
+// 4096bytes. Zlib vertex blocks decode to at most VertexBlockSize*16 bytes;
+// bit-packed blocks retain their encoded bytes (at most that size plus22).
+// Geometry blocks vary with source complexity. Zero disables a cache.
+// PreloadVertices uses Metadata.RawVertexBytes additional payload RAM.
 type ReaderOptions struct {
 	VertexCachePages    int
 	GeometryCacheBlocks int
 	PreloadVertices     bool
+	VertexCacheBlocks   int
 }
 type cacheItem struct {
 	key  uint64
@@ -450,16 +484,17 @@ func (c *byteCache) put(key uint64, data []byte) {
 }
 
 type inflateState struct {
-	reader io.ReadCloser
-	buffer bytes.Buffer
+	reader     io.ReadCloser
+	buffer     bytes.Buffer
+	compressed []byte
 }
 
 func OpenReaderAt(r io.ReaderAt, size int64) (*Reader, error) {
-	return OpenReaderAtWithOptions(r, size, ReaderOptions{VertexCachePages: 64, GeometryCacheBlocks: 16})
+	return OpenReaderAtWithOptions(r, size, ReaderOptions{VertexCachePages: 64, VertexCacheBlocks: 64, GeometryCacheBlocks: 16})
 }
 
 func OpenReaderAtWithOptions(r io.ReaderAt, size int64, options ReaderOptions) (*Reader, error) {
-	if options.VertexCachePages < 0 || options.GeometryCacheBlocks < 0 {
+	if options.VertexCachePages < 0 || options.GeometryCacheBlocks < 0 || options.VertexCacheBlocks < 0 {
 		return nil, errors.New("negative cache capacity")
 	}
 	if size < headerSize {
@@ -469,12 +504,13 @@ func OpenReaderAtWithOptions(r io.ReaderAt, size int64, options ReaderOptions) (
 	if _, err := r.ReadAt(header, 0); err != nil {
 		return nil, err
 	}
-	if !bytes.Equal(header[:8], magic[:]) || binary.LittleEndian.Uint32(header[8:12]) != 1 {
+	version := binary.LittleEndian.Uint32(header[8:12])
+	if !bytes.Equal(header[:8], magic[:]) || (version != 1 && version != 2) {
 		return nil, errors.New("unsupported geometry component")
 	}
 	u32 := func(off int) uint32 { return binary.LittleEndian.Uint32(header[off : off+4]) }
 	u64 := func(off int) uint64 { return binary.LittleEndian.Uint64(header[off : off+8]) }
-	m := Metadata{Decimals: u32(12), Features: u32(16), BlockSize: u32(20), Vertices: u64(24), Bytes: u64(56), MaxLatitudeError: math.Float64frombits(u64(64)), MaxLongitudeError: math.Float64frombits(u64(72)), CollapsedEdges: u64(80), CollapsedRings: u64(88), ExtraOrdinateVertices: u64(96), OrientationChanges: u64(104)}
+	m := Metadata{Version: version, Decimals: u32(12), Features: u32(16), BlockSize: u32(20), Vertices: u64(24), Bytes: u64(56), MaxLatitudeError: math.Float64frombits(u64(64)), MaxLongitudeError: math.Float64frombits(u64(72)), CollapsedEdges: u64(80), CollapsedRings: u64(88), ExtraOrdinateVertices: u64(96), OrientationChanges: u64(104)}
 	vertexOffset, directoryOffset, nblocks, width := u64(32), u64(40), u32(48), u32(52)
 	if m.Decimals != 0 && m.Decimals != 6 && m.Decimals != 7 {
 		return nil, errors.New("invalid quantization mode")
@@ -485,13 +521,17 @@ func OpenReaderAtWithOptions(r io.ReaderAt, size int64, options ReaderOptions) (
 	}
 	// Check ranges before arithmetic/allocation so malicious component offsets
 	// cannot wrap into a small file and request a huge directory allocation.
-	if vertexOffset > uint64(size) || directoryOffset > uint64(size) || width == 0 || m.Vertices > (uint64(size)-vertexOffset)/uint64(width) || uint64(nblocks) > (uint64(size)-directoryOffset)/16 {
+	if vertexOffset > uint64(size) || directoryOffset > uint64(size) || width == 0 || uint64(nblocks) > (uint64(size)-directoryOffset)/16 {
 		return nil, errors.New("geometry sections exceed component bounds")
 	}
-	if width != expectedWidth || m.BlockSize == 0 || m.BlockSize > 65536 || uint64(nblocks) != (uint64(m.Features)+uint64(m.BlockSize)-1)/uint64(m.BlockSize) || m.Bytes != uint64(size) || vertexOffset < headerSize || m.Vertices > math.MaxUint32 || directoryOffset != vertexOffset+m.Vertices*uint64(width) || directoryOffset+uint64(nblocks)*16 != uint64(size) {
+	if width != expectedWidth || m.BlockSize == 0 || m.BlockSize > 65536 || uint64(nblocks) != (uint64(m.Features)+uint64(m.BlockSize)-1)/uint64(m.BlockSize) || m.Bytes != uint64(size) || vertexOffset < headerSize || m.Vertices > math.MaxUint32 || directoryOffset < vertexOffset || directoryOffset+uint64(nblocks)*16 != uint64(size) {
 		return nil, errors.New("invalid geometry offsets/counts")
 	}
-	m.VertexBytes = m.Vertices * uint64(width)
+	m.RawVertexBytes = m.Vertices * uint64(width)
+	m.VertexBytes = directoryOffset - vertexOffset
+	if version == 1 && directoryOffset-vertexOffset != m.RawVertexBytes {
+		return nil, errors.New("invalid raw vertex table size")
+	}
 	m.DirectoryBytes = uint64(nblocks) * 16
 	m.BlockBytes = vertexOffset - headerSize
 	encoded := make([]byte, int(nblocks)*16)
@@ -500,7 +540,13 @@ func OpenReaderAtWithOptions(r io.ReaderAt, size int64, options ReaderOptions) (
 			return nil, err
 		}
 	}
-	reader := &Reader{r: r, meta: m, vertexOffset: vertexOffset, vertexWidth: width, entries: make([]blockEntry, nblocks), vertexPages: newByteCache(options.VertexCachePages), blocks: newByteCache(options.GeometryCacheBlocks)}
+	reader := &Reader{r: r, meta: m, vertexOffset: vertexOffset, vertexWidth: width, entries: make([]blockEntry, nblocks), vertexPages: newByteCache(options.VertexCachePages), blocks: newByteCache(options.GeometryCacheBlocks), vertexBlocks: newByteCache(options.VertexCacheBlocks)}
+	if version == 2 {
+		if err := reader.openVertexDirectory(u32(112), VertexCodec(u32(116)), u64(120), directoryOffset); err != nil {
+			return nil, err
+		}
+		m = reader.meta
+	}
 	var previousEnd uint64 = headerSize
 	for i := range reader.entries {
 		data := encoded[i*16 : i*16+16]
@@ -515,11 +561,29 @@ func OpenReaderAtWithOptions(r io.ReaderAt, size int64, options ReaderOptions) (
 		return nil, errors.New("incomplete block directory")
 	}
 	if options.PreloadVertices {
-		if m.VertexBytes > 2<<30 {
+		if m.RawVertexBytes > 2<<30 {
 			return nil, errors.New("vertex preload exceeds2GiB; use bounded page cache")
 		}
-		reader.vertexData = make([]byte, int(m.VertexBytes))
-		if len(reader.vertexData) > 0 {
+		reader.vertexData = make([]byte, int(m.RawVertexBytes))
+		if m.Version == 2 {
+			for i := range reader.vertexEntries {
+				data, err := reader.readVertexBlock(uint64(i))
+				if err != nil {
+					return nil, err
+				}
+				if m.VertexCodec == VertexXORBitpack {
+					count := int(reader.vertexEntries[i].raw) / 16
+					for j := 0; j < count; j++ {
+						v := packedVertex(data, count, j)
+						p := reader.vertexData[(uint64(i)*uint64(m.VertexBlockSize)+uint64(j))*16:]
+						binary.LittleEndian.PutUint64(p, v.x)
+						binary.LittleEndian.PutUint64(p[8:], v.y)
+					}
+				} else {
+					copy(reader.vertexData[uint64(i)*uint64(m.VertexBlockSize)*16:], data)
+				}
+			}
+		} else if len(reader.vertexData) > 0 {
 			if _, err := r.ReadAt(reader.vertexData, int64(vertexOffset)); err != nil {
 				return nil, err
 			}
@@ -656,15 +720,15 @@ func (r *Reader) decodeRecord(data []byte) (plss.Geometry, error) {
 			previous = id
 			xy, ok := vertexCache[uint32(id)]
 			if !ok {
-				raw, err := r.vertex(uint32(id))
+				raw, err := r.vertexXY(uint32(id))
 				if err != nil {
 					return plss.Geometry{}, err
 				}
 				if r.meta.Decimals == 0 {
-					xy = [2]float64{math.Float64frombits(binary.LittleEndian.Uint64(raw[:8])), math.Float64frombits(binary.LittleEndian.Uint64(raw[8:]))}
+					xy = [2]float64{math.Float64frombits(raw.x), math.Float64frombits(raw.y)}
 				} else {
 					scale := math.Pow10(int(r.meta.Decimals))
-					xy = [2]float64{float64(int32(binary.LittleEndian.Uint32(raw[:4]))) / scale, float64(int32(binary.LittleEndian.Uint32(raw[4:8]))) / scale}
+					xy = [2]float64{float64(int32(uint32(raw.x))) / scale, float64(int32(uint32(raw.y))) / scale}
 				}
 				vertexCache[uint32(id)] = xy
 			}
@@ -697,6 +761,22 @@ func (r *Reader) vertex(id uint32) ([]byte, error) {
 	offset := uint64(id) * uint64(r.vertexWidth)
 	if len(r.vertexData) > 0 {
 		return r.vertexData[offset : offset+uint64(r.vertexWidth)], nil
+	}
+	if r.meta.Version == 2 {
+		block := uint64(id) / uint64(r.meta.VertexBlockSize)
+		within := uint64(id) % uint64(r.meta.VertexBlockSize) * 16
+		data, err := r.vertexBlock(block)
+		if err != nil {
+			return nil, err
+		}
+		if r.meta.VertexCodec == VertexXORBitpack {
+			v := packedVertex(data, int(r.vertexEntries[block].raw)/16, int(id%r.meta.VertexBlockSize))
+			out := make([]byte, 16)
+			binary.LittleEndian.PutUint64(out, v.x)
+			binary.LittleEndian.PutUint64(out[8:], v.y)
+			return out, nil
+		}
+		return data[within : within+16 : within+16], nil
 	}
 	if r.vertexPages.capacity == 0 {
 		raw := make([]byte, r.vertexWidth)

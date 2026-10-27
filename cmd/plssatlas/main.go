@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/oudanny/PLSconvertmyPLSS/coord"
-	"github.com/oudanny/PLSconvertmyPLSS/internal/atlas"
+	"github.com/oudanny/PLSconvertmyPLSS/internal/regionatlas"
 	"github.com/oudanny/PLSconvertmyPLSS/plss"
 )
 
@@ -25,6 +25,8 @@ Usage:
   plssatlas plss --id PUBLISHED_ID --layer division --data PACK.atlas [--json]
 
 Uses a read-only memory mapping by default; --buffered uses ordinary file reads.
+--data accepts one state atlas or a region containing several state atlases.
+Region lookups preserve every match at the finest available PLSS layer.
 --metadata loads original source attributes and requires an atlas containing
 the optional full-attributes component. Core atlases support coordinate and
 exact published-ID conversion. This experimental command never uses a network.
@@ -43,7 +45,7 @@ type coordinates struct {
 }
 
 type match struct {
-	atlas.Hit
+	regionatlas.Hit
 	Attributes map[string]any `json:"attributes,omitempty"`
 }
 
@@ -54,11 +56,12 @@ type result struct {
 }
 
 type output struct {
-	Experimental bool              `json:"experimental"`
-	Data         string            `json:"data"`
-	Source       plss.PackMetadata `json:"source"`
-	Results      []result          `json:"results"`
-	Notes        []string          `json:"notes,omitempty"`
+	Experimental bool                `json:"experimental"`
+	Data         string              `json:"data"`
+	Source       *plss.PackMetadata  `json:"source,omitempty"`
+	Sources      []plss.PackMetadata `json:"sources,omitempty"`
+	Results      []result            `json:"results"`
+	Notes        []string            `json:"notes,omitempty"`
 }
 
 func main() {
@@ -81,7 +84,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 	fs.SetOutput(stderr)
 	var data, value, id, layer string
 	var asJSON, metadata, buffered bool
-	fs.StringVar(&data, "data", "", "path to an experimental .atlas file (required)")
+	fs.StringVar(&data, "data", "", "path to an experimental state or region .atlas file (required)")
 	fs.BoolVar(&asJSON, "json", false, "write structured JSON")
 	fs.BoolVar(&metadata, "metadata", false, "load original attributes; requires a full-attributes atlas")
 	fs.BoolVar(&buffered, "buffered", false, "use ordinary file reads instead of memory mapping")
@@ -135,28 +138,35 @@ func run(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	var reader *atlas.Reader
+	var reader *regionatlas.Reader
 	if buffered {
-		reader, err = atlas.Open(data)
+		reader, err = regionatlas.Open(data)
 	} else {
-		reader, err = atlas.OpenMapped(data)
+		reader, err = regionatlas.OpenMapped(data)
 	}
 	if err != nil {
 		return fmt.Errorf("open atlas: %w", err)
 	}
 	defer reader.Close()
-	if metadata {
-		section, ok := reader.Manifest.Sections["attributes"]
-		if !ok || section.Size == 0 || reader.Attributes == nil {
-			return errors.New("--metadata requires an atlas with full source attributes; this core atlas contains identifiers and geometry only")
+	full := func(hit regionatlas.Hit) (plss.Match, error) {
+		has, err := reader.HasFullAttributes(hit)
+		if err != nil {
+			return plss.Match{}, err
 		}
-		if reader.Attributes.Metadata().Essential {
-			return errors.New("--metadata requires full source attributes; this atlas contains a conversion-only attribute subset")
+		if !has {
+			return plss.Match{}, fmt.Errorf("--metadata requires full source attributes; the %s atlas contains identifiers and geometry or a conversion-only attribute subset", hit.State)
 		}
+		return reader.Full(hit)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	out := output{Experimental: true, Data: data, Source: reader.Manifest.Source}
+	out := output{Experimental: true, Data: data}
+	sources := reader.Sources()
+	if len(sources) == 1 {
+		out.Source = &sources[0]
+	} else {
+		out.Sources = sources
+	}
 	if command == "plss" {
 		hits, err := reader.FindID(layer, id)
 		if err != nil {
@@ -166,18 +176,14 @@ func run(args []string, stdout, stderr io.Writer) error {
 			m := match{Hit: hit}
 			var representative plss.Point
 			if metadata {
-				full, err := reader.Full(hit)
+				full, err := full(hit)
 				if err != nil {
 					return err
 				}
 				m.Attributes = full.Attributes
 				representative = full.Representative
 			} else {
-				g, err := reader.Geometry.Record(hit.FeatureID)
-				if err != nil {
-					return err
-				}
-				representative, err = g.InteriorPoint()
+				representative, err = reader.Representative(hit)
 				if err != nil {
 					return err
 				}
@@ -202,7 +208,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 		for _, hit := range hits {
 			m := match{Hit: hit}
 			if metadata {
-				full, err := reader.Full(hit)
+				full, err := full(hit)
 				if err != nil {
 					return err
 				}
@@ -277,6 +283,17 @@ func writeOutput(w io.Writer, out output, asJSON bool) error {
 			return err
 		}
 	}
-	_, err := fmt.Fprintf(w, "Data: %s\nSource: %s (snapshot %s)\n", out.Data, out.Source.Source, out.Source.CreatedAt)
-	return err
+	if _, err := fmt.Fprintf(w, "Data: %s\n", out.Data); err != nil {
+		return err
+	}
+	sources := out.Sources
+	if out.Source != nil {
+		sources = []plss.PackMetadata{*out.Source}
+	}
+	for _, source := range sources {
+		if _, err := fmt.Fprintf(w, "Source [%s]: %s (snapshot %s)\n", source.State, source.Source, source.CreatedAt); err != nil {
+			return err
+		}
+	}
+	return nil
 }

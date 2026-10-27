@@ -1,5 +1,10 @@
 # Compact Nevada atlas: complete files and measured queries
 
+This report records the first Nevada prototype. The subsequent
+[western-US atlas](western-atlas.md) covers 11 states, improves lossless vertex
+and survey-ID storage, and adds a public Go reader library. The original sizes
+and timings below remain historical measurements of that earlier build.
+
 The redesign builds a **65,199,261-byte (62.18 MiB) Nevada file** for exact
 point-to-PLSS and published-ID-to-coordinate lookup. It retains all 1,510,482
 original polygon records, their full-precision coordinates and cadastral IDs,

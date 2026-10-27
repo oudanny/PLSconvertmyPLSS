@@ -15,11 +15,16 @@ import (
 	"github.com/oudanny/PLSconvertmyPLSS/internal/columns"
 	"github.com/oudanny/PLSconvertmyPLSS/internal/compactgeom"
 	"github.com/oudanny/PLSconvertmyPLSS/internal/keyindex"
+	"github.com/oudanny/PLSconvertmyPLSS/internal/regionatlas"
 	"github.com/oudanny/PLSconvertmyPLSS/internal/spatialindex"
 	"github.com/oudanny/PLSconvertmyPLSS/plss"
 )
 
 func smallAtlas(t *testing.T, mode string) (string, string) {
+	return smallStateAtlas(t, mode, "NV")
+}
+
+func smallStateAtlas(t *testing.T, mode, state string) (string, string) {
 	t.Helper()
 	dir := t.TempDir()
 	paths := map[string]string{"keys": filepath.Join(dir, "keys"), "index": filepath.Join(dir, "index"), "geometry": filepath.Join(dir, "geometry")}
@@ -44,7 +49,7 @@ func smallAtlas(t *testing.T, mode string) (string, string) {
 			t.Fatal(e)
 		}
 	}
-	id := "NV210010N0010E0SN010ASWSE"
+	id := state + "210010N0010E0SN010ASWSE"
 	for i := uint32(1); i <= 2; i++ {
 		x1 := -119.82 + float64(i-1)*.01
 		x2 := x1 + .01
@@ -52,7 +57,7 @@ func smallAtlas(t *testing.T, mode string) (string, string) {
 		if e := geom.Add(i, g); e != nil {
 			t.Fatal(e)
 		}
-		if e := key.Add(keyindex.Source{ID: i, Layer: 3, Township: "NV210010N0010E0", First: "NV210010N0010E0SN010", Second: id}); e != nil {
+		if e := key.Add(keyindex.Source{ID: i, Layer: 3, Township: state + "210010N0010E0", First: state + "210010N0010E0SN010", Second: id}); e != nil {
 			t.Fatal(e)
 		}
 		bounds, e := g.IndexBounds()
@@ -115,7 +120,7 @@ func smallAtlas(t *testing.T, mode string) (string, string) {
 		f.Close()
 	}
 	path := filepath.Join(dir, "example.atlas")
-	source := plss.PackMetadata{Version: 1, State: "NV", Source: "https://example.invalid/offline", CreatedAt: "2026-10-27T00:00:00Z", Counts: map[string]int{"township": 0, "section": 0, "intersected": 2}, UnlocatedCounts: map[string]int{"intersected": 1}}
+	source := plss.PackMetadata{Version: 1, State: state, Source: "https://example.invalid/offline", CreatedAt: "2026-10-27T00:00:00Z", Counts: map[string]int{"township": 0, "section": 0, "intersected": 2}, UnlocatedCounts: map[string]int{"intersected": 1}}
 	audit := []plss.UnlocatedRecord{{Layer: "intersected", Attributes: map[string]any{"SECDIVID": "requires-survey"}, Reason: "source has no geometry"}}
 	if _, e := atlas.Build(path, source, "fixture", paths, audit); e != nil {
 		t.Fatal(e)
@@ -253,5 +258,43 @@ func TestCLIValidationAndHelp(t *testing.T) {
 	c, note := formatCoordinates(coord.Point{Latitude: 89, Longitude: 0})
 	if c.UTM != nil || note == "" || c.DMS == "" {
 		t.Fatal("polar coordinate formatting incorrect")
+	}
+}
+
+func TestCLIRegionPreservesStateAndAllOverlappingRecords(t *testing.T) {
+	nv, _ := smallStateAtlas(t, "full", "NV")
+	ca, id := smallStateAtlas(t, "full", "CA")
+	path := filepath.Join(t.TempDir(), "west.atlas")
+	if _, err := regionatlas.Build(path, []regionatlas.ShardInput{{Path: nv}, {Path: ca}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, buffered := range []bool{false, true} {
+		args := []string{"latlon", "--value", "39.5296,-119.8138", "--data", path, "--json", "--metadata"}
+		if buffered {
+			args = append(args, "--buffered")
+		}
+		text, err := invoke(t, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := decodeOutput(t, text)
+		if out.Source != nil || len(out.Sources) != 2 || len(out.Results) != 1 || len(out.Results[0].Matches) != 2 {
+			t.Fatalf("region output: %+v", out)
+		}
+		hits := out.Results[0].Matches
+		if hits[0].State != "NV" || hits[1].State != "CA" || hits[0].FeatureID != hits[1].FeatureID {
+			t.Fatalf("state identity lost: %+v", hits)
+		}
+		if hits[0].Attributes["OBJECTID"] != json.Number("9007199254740993") {
+			t.Fatal("region metadata precision changed")
+		}
+	}
+	text, err := invoke(t, "plss", "--id", id, "--data", path, "--json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := decodeOutput(t, text)
+	if len(out.Results) != 2 || out.Results[0].Matches[0].State != "CA" || !out.Results[0].Representative {
+		t.Fatalf("region reverse lookup: %+v", out)
 	}
 }

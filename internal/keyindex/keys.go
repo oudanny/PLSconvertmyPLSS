@@ -82,7 +82,6 @@ func (b *Builder) Add(s Source) error {
 	b.postings[t] = append(b.postings[t], s.ID)
 	if s.Survey != "" {
 		b.surveys[s.ID] = s.Survey
-		b.exceptions["4:"+s.Survey] = append(b.exceptions["4:"+s.Survey], s.ID)
 	}
 	for i, v := range []string{s.First, s.Second} {
 		if v != "" && (s.Township == "" || !strings.HasPrefix(v, s.Township)) {
@@ -101,16 +100,36 @@ type manifest struct {
 	Dicts      [3][]Part           `json:"dictionaries"`
 	Surveys    map[uint32]string   `json:"surveys,omitempty"`
 	Exceptions map[string][]uint32 `json:"exceptions,omitempty"`
+	SurveyDict []SurveyPart        `json:"survey_dictionary,omitempty"`
+	SurveyBits uint8               `json:"survey_bits,omitempty"`
+	SurveyRows uint32              `json:"survey_rows,omitempty"`
+	SurveyMode string              `json:"survey_mode,omitempty"`
+	Routes     []string            `json:"routing_prefixes,omitempty"`
 }
 
 func (b *Builder) WriteTo(w io.Writer) (int64, error) {
-	return b.writeVersion(w, 2)
+	return b.writeVersion(w, 3)
 }
 
-// writeVersion retains the v1 encoder only for compatibility tests. New files
-// use v2's group directory so opening never has to decode all feature postings.
+// writeVersion retains older encoders for compatibility tests. Version3 adds
+// factored survey codes and routes ordinary survey IDs through township groups.
 func (b *Builder) writeVersion(w io.Writer, version int) (int64, error) {
 	m := manifest{Count: uint32(len(b.rows)), Layers: b.layers, Dicts: b.dicts, Surveys: b.surveys, Exceptions: b.exceptions}
+	if version < 3 {
+		m.Exceptions = make(map[string][]uint32, len(b.exceptions))
+		for key, ids := range b.exceptions {
+			m.Exceptions[key] = ids
+		}
+		for row, survey := range b.surveys {
+			key := "4:" + survey
+			m.Exceptions[key] = append(m.Exceptions[key], row)
+		}
+		for key, ids := range m.Exceptions {
+			if strings.HasPrefix(key, "4:") {
+				sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+			}
+		}
+	}
 	total := 0
 	for i, d := range b.dicts {
 		m.Bits[i] = uint8(bits.Len32(uint32(len(d) - 1)))
@@ -123,6 +142,11 @@ func (b *Builder) writeVersion(w io.Writer, version int) (int64, error) {
 	if m.Width == 0 {
 		m.Width = 1
 	}
+	var surveyData []byte
+	if version == 3 {
+		surveyData = b.factorSurveys(&m)
+		m.Routes = routingPrefixes(m)
+	}
 	doc, err := json.Marshal(m)
 	if err != nil {
 		return 0, err
@@ -130,6 +154,8 @@ func (b *Builder) writeVersion(w io.Writer, version int) (int64, error) {
 	var out bytes.Buffer
 	if version == 1 {
 		out.WriteString("PLSSKEY1")
+	} else if version == 3 {
+		out.WriteString("PLSSKEY3")
 	} else {
 		out.WriteString("PLSSKEY2")
 	}
@@ -146,6 +172,7 @@ func (b *Builder) writeVersion(w io.Writer, version int) (int64, error) {
 			out.WriteByte(byte(code >> (8 * j)))
 		}
 	}
+	out.Write(surveyData)
 	var postingData bytes.Buffer
 	offsets := make([]uint32, 0, len(b.postings)+1)
 	var tmp [10]byte
@@ -167,7 +194,7 @@ func (b *Builder) writeVersion(w io.Writer, version int) (int64, error) {
 		return 0, errors.New("posting payload exceeds uint32 directory capacity")
 	}
 	offsets = append(offsets, uint32(postingData.Len()))
-	if version == 2 {
+	if version >= 2 {
 		for _, offset := range offsets {
 			_ = binary.Write(&out, binary.LittleEndian, offset)
 		}
@@ -194,6 +221,8 @@ type Index struct {
 	exceptions    map[string][]uint32
 	ownedData     int
 	sourceBytes   int
+	surveyData    []byte
+	version3      bool
 }
 
 func Open(r io.ReaderAt, size int64) (*Index, error) {
@@ -223,7 +252,7 @@ func OpenView(data []byte) (*Index, error) {
 		return nil, errors.New("invalid key-index size")
 	}
 	magic := string(data[:8])
-	if magic != "PLSSKEY1" && magic != "PLSSKEY2" {
+	if magic != "PLSSKEY1" && magic != "PLSSKEY2" && magic != "PLSSKEY3" {
 		return nil, errors.New("invalid key-index magic")
 	}
 	manifestLength := uint64(binary.LittleEndian.Uint32(data[8:12]))
@@ -232,6 +261,7 @@ func OpenView(data []byte) (*Index, error) {
 	}
 	n := int(manifestLength)
 	x := &Index{sourceBytes: len(data), townships: map[string]uint32{}}
+	x.version3 = magic == "PLSSKEY3"
 	if err := json.Unmarshal(data[12:12+n], &x.m); err != nil {
 		return nil, err
 	}
@@ -256,7 +286,21 @@ func OpenView(data []byte) (*Index, error) {
 	}
 	x.data = data[pos:int(end):int(end)]
 	pos = int(end)
-	if magic == "PLSSKEY2" {
+	if x.version3 {
+		n, err := x.surveyDataSize()
+		if err != nil {
+			return nil, err
+		}
+		if n > uint64(len(data)-pos) {
+			return nil, errors.New("truncated survey codes")
+		}
+		x.surveyData = data[pos : pos+int(n) : pos+int(n)]
+		pos += int(n)
+		if err := x.validateSurveyCodes(); err != nil {
+			return nil, err
+		}
+	}
+	if magic == "PLSSKEY2" || x.version3 {
 		directoryBytes := (uint64(len(m.Dicts[0])) + 1) * 4
 		if directoryBytes > uint64(len(data)-pos) {
 			return nil, errors.New("truncated posting directory")
@@ -410,6 +454,14 @@ func (x *Index) MemoryStats() MemoryUsage {
 			s.OwnedMetadataEstimateBytes += int64(len(p.Text))
 		}
 	}
+	s.OwnedArrayBytes += int64(cap(x.m.SurveyDict)) * int64(unsafe.Sizeof(SurveyPart{}))
+	for _, p := range x.m.SurveyDict {
+		s.OwnedMetadataEstimateBytes += int64(len(p.Text))
+	}
+	s.OwnedArrayBytes += int64(cap(x.m.Routes)) * int64(unsafe.Sizeof(""))
+	for _, p := range x.m.Routes {
+		s.OwnedMetadataEstimateBytes += int64(len(p))
+	}
 	s.OwnedMetadataEstimateBytes += int64(len(x.townships))*40 + int64(len(x.m.Surveys))*40 + int64(len(x.exceptions))*56
 	for _, text := range x.m.Surveys {
 		s.OwnedMetadataEstimateBytes += int64(len(text))
@@ -452,7 +504,11 @@ func (x *Index) ID(id uint32) (string, error) {
 	if v := x.value(c, 2); v != "" {
 		return v, nil
 	}
-	if v := x.m.Surveys[id]; v != "" {
+	v, err := x.surveyValue(id, c)
+	if err != nil {
+		return "", err
+	}
+	if v != "" {
 		return v, nil
 	}
 	if v := x.value(c, 1); v != "" {
@@ -468,7 +524,11 @@ func (x *Index) Fields(id uint32) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"PLSSID": x.value(c, 0), "FRSTDIVID": x.value(c, 1), "SECDIVID": x.value(c, 2), "SURVID": x.m.Surveys[id]}, nil
+	survey, err := x.surveyValue(id, c)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"PLSSID": x.value(c, 0), "FRSTDIVID": x.value(c, 1), "SECDIVID": x.value(c, 2), "SURVID": survey}, nil
 }
 func (x *Index) match(c [3]uint32, field int, value string) bool {
 	p := x.m.Dicts[field][c[field]]
@@ -493,6 +553,10 @@ func (x *Index) Find(kind, id string) ([]uint32, error) {
 	case "division", "intersected":
 		field, layer = 2, 3
 	case "survey":
+		if x.version3 {
+			field, layer = 3, 3
+			break
+		}
 		var found []uint32
 		for _, row := range x.exceptions["4:"+id] {
 			if row == 0 || row > x.m.Count || x.m.Surveys[row] != id {
@@ -527,7 +591,11 @@ func (x *Index) Find(kind, id string) ([]uint32, error) {
 			if c[0] != t {
 				return errors.New("posting row belongs to another township")
 			}
-			if x.Layer(current) == layer && x.match(c, field, id) {
+			matches, err := x.matchField(current, c, field, id)
+			if err != nil {
+				return err
+			}
+			if x.Layer(current) == layer && matches {
 				found = append(found, current)
 			}
 			return nil
@@ -542,7 +610,11 @@ func (x *Index) Find(kind, id string) ([]uint32, error) {
 			if err != nil {
 				return nil, err
 			}
-			if !x.match(c, field, id) {
+			matches, err := x.matchField(row, c, field, id)
+			if err != nil {
+				return nil, err
+			}
+			if !matches {
 				return nil, errors.New("exception row has a different cadastral ID")
 			}
 			found = append(found, row)
@@ -566,6 +638,12 @@ func (x *Index) Validate() error {
 	if x == nil {
 		return errors.New("nil key index")
 	}
+	if err := x.validateSurveyCodes(); err != nil {
+		return err
+	}
+	if x.version3 && !equalRoutes(x.m.Routes, routingPrefixes(x.m)) {
+		return errors.New("routing prefixes omit or disagree with key dictionaries")
+	}
 	for row, text := range x.m.Surveys {
 		if row == 0 || row > x.m.Count || text == "" {
 			return errors.New("invalid survey row")
@@ -582,7 +660,15 @@ func (x *Index) Validate() error {
 			}
 			previous = row
 			if key[0] == '4' {
-				if x.m.Surveys[row] != key[2:] {
+				c, err := x.codes(row)
+				if err != nil {
+					return err
+				}
+				value, err := x.surveyValue(row, c)
+				if err != nil {
+					return err
+				}
+				if value != key[2:] {
 					return errors.New("survey exception differs from published ID")
 				}
 			} else {
@@ -597,6 +683,7 @@ func (x *Index) Validate() error {
 		}
 	}
 	var total uint64
+	var surveys uint32
 	for group := range x.m.Dicts[0] {
 		data, err := x.posting(uint32(group))
 		if err != nil {
@@ -629,8 +716,15 @@ func (x *Index) Validate() error {
 					}
 				}
 			}
-			if survey := x.m.Surveys[row]; survey != "" && !containsRow(x.exceptions["4:"+survey], row) {
-				return errors.New("missing survey exception")
+			survey, err := x.surveyValue(row, c)
+			if err != nil {
+				return err
+			}
+			if survey != "" {
+				surveys++
+				if (!x.version3 || township == "" || !strings.HasPrefix(survey, township)) && !containsRow(x.exceptions["4:"+survey], row) {
+					return errors.New("missing survey exception")
+				}
 			}
 			return nil
 		})
@@ -641,6 +735,9 @@ func (x *Index) Validate() error {
 	}
 	if total != uint64(x.m.Count) {
 		return errors.New("postings omit feature records")
+	}
+	if x.version3 && surveys != x.m.SurveyRows {
+		return errors.New("survey codes omit or disagree with published survey count")
 	}
 	return nil
 }

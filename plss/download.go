@@ -18,8 +18,9 @@ import (
 	"time"
 )
 
-// DownloadOptions configures a full, lossless state data pack. Nevada is the
-// initial supported state. HTTPClient may be supplied for proxies or testing.
+// DownloadOptions configures a full, lossless state data pack. State defaults
+// to NV; SupportedDownloadStates lists the accepted state abbreviations.
+// HTTPClient may be supplied for proxies or testing.
 // Progress runs synchronously on the importing goroutine, never concurrently.
 type DownloadOptions struct {
 	State      string
@@ -33,6 +34,22 @@ type DownloadProgress struct {
 	Layer     int
 	Completed int
 	Total     int
+}
+
+// SupportedDownloadStates returns the contiguous western states supported by
+// DownloadPack. The returned slice is a fresh copy that callers may modify.
+// Availability and completeness still depend on BLM's published source data.
+func SupportedDownloadStates() []string {
+	return []string{"AZ", "CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY"}
+}
+
+func supportedDownloadState(state string) bool {
+	switch state {
+	case "AZ", "CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY":
+		return true
+	default:
+		return false
+	}
 }
 
 const downloadBatchSize = 1000
@@ -59,6 +76,8 @@ type downloadFeature struct {
 // DownloadPack downloads every record whose PLSSID begins with the selected
 // state from BLM township, section, and intersected layers. It snapshots each
 // layer's object IDs before downloading and verifies every expected feature.
+// Individual layers may be empty; a state with no records in any layer is an
+// error and is never published. Missing or null object-ID arrays are errors.
 // Records without source geometry are confirmed in the native spatial reference
 // and retained as unlocated audit records; they are not spatially indexed.
 // A changing upstream dataset can cause an explicit error; a partial pack is
@@ -74,8 +93,8 @@ func DownloadPack(ctx context.Context, path string, options DownloadOptions) (Pa
 	if state == "" {
 		state = "NV"
 	}
-	if state != "NV" {
-		return zero, errors.New("offline pack downloads currently support Nevada (NV) only")
+	if !supportedDownloadState(state) {
+		return zero, fmt.Errorf("unsupported download state %q; supported states: %s", state, strings.Join(SupportedDownloadStates(), ", "))
 	}
 	if strings.TrimSpace(path) == "" {
 		return zero, errors.New("a data pack output path is required")
@@ -113,15 +132,23 @@ func DownloadPack(ctx context.Context, path string, options DownloadOptions) (Pa
 	}
 	d := packDownloader{base: base, http: client, workers: workers, progress: options.Progress}
 	snapshots := make([]layerSnapshot, 0, 3)
+	total := 0
 	for _, layer := range []int{1, 2, 3} {
 		snapshot, err := d.snapshot(ctx, layer, state)
 		if err != nil {
 			return zero, err
 		}
 		snapshots = append(snapshots, snapshot)
+		total += len(snapshot.ids)
 		if d.progress != nil {
 			d.progress(DownloadProgress{Layer: layer, Total: len(snapshot.ids)})
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return zero, err
+	}
+	if total == 0 {
+		return zero, fmt.Errorf("BLM has no published records for %s in township, section, or intersected layers; no pack was created", state)
 	}
 	parent := filepath.Dir(path)
 	if err := os.MkdirAll(parent, 0755); err != nil {
@@ -181,8 +208,8 @@ func (d *packDownloader) snapshot(ctx context.Context, layer int, state string) 
 	if err := json.Unmarshal(body, &result); err != nil {
 		return layerSnapshot{}, fmt.Errorf("decode layer %d object IDs: %w", layer, err)
 	}
-	if result.ObjectIDFieldName == "" || result.ObjectIDs == nil || len(*result.ObjectIDs) == 0 {
-		return layerSnapshot{}, fmt.Errorf("layer %d has no object-ID snapshot for %s", layer, state)
+	if strings.TrimSpace(result.ObjectIDFieldName) == "" || result.ObjectIDs == nil {
+		return layerSnapshot{}, fmt.Errorf("layer %d has an invalid object-ID snapshot for %s: objectIdFieldName and an explicit objectIds array are required", layer, state)
 	}
 	if result.ExceededTransferLimit {
 		return layerSnapshot{}, fmt.Errorf("layer %d object-ID snapshot was truncated", layer)
@@ -202,6 +229,9 @@ func (d *packDownloader) snapshot(ctx context.Context, layer int, state string) 
 }
 
 func (d *packDownloader) importLayer(ctx context.Context, writer *PackWriter, snapshot layerSnapshot) error {
+	if len(snapshot.ids) == 0 {
+		return ctx.Err()
+	}
 	workCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	type batchResult struct {

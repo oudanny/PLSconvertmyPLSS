@@ -103,6 +103,7 @@ type Reader struct {
 	Index      *spatialindex.Index
 	Geometry   *compactgeom.Reader
 	Attributes *columns.Reader
+	source     io.ReaderAt
 }
 
 func Open(path string) (*Reader, error) { return open(path, false) }
@@ -117,62 +118,104 @@ func open(path string, mapped bool) (*Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	a := &Reader{File: f}
-	fail := func(err error) (*Reader, error) {
-		if a.mapping != nil {
-			a.mapping.Close()
-		}
+	info, err := f.Stat()
+	if err != nil {
 		f.Close()
 		return nil, err
 	}
-	info, err := f.Stat()
-	if err != nil {
-		return fail(err)
-	}
-	if info.Size() < headerSize {
-		return fail(errors.New("truncated atlas header"))
-	}
-	var source io.ReaderAt = f
+	var mapping *mappedfile.Mapping
+	var a *Reader
 	if mapped {
-		a.mapping, err = mappedfile.FromFile(f)
-		if err != nil {
-			return fail(err)
+		mapping, err = mappedfile.FromFile(f)
+		if err == nil {
+			a, err = OpenView(mapping.Bytes)
 		}
-		source = bytes.NewReader(a.mapping.Bytes)
+	} else {
+		a, err = OpenReaderAt(f, info.Size())
+	}
+	if err != nil {
+		if mapping != nil {
+			_ = mapping.Close()
+		}
+		_ = f.Close()
+		return nil, err
+	}
+	a.File, a.mapping = f, mapping
+	return a, nil
+}
+
+// OpenView borrows an immutable atlas section, including its mapped pages.
+// Close never releases the borrowed bytes. The owner must keep them available
+// until this reader is closed and all of its methods have returned.
+func OpenView(data []byte) (*Reader, error) {
+	return openSource(bytes.NewReader(data), int64(len(data)), data)
+}
+
+// OpenReaderAt borrows a bounded source. Close does not close that source.
+func OpenReaderAt(source io.ReaderAt, size int64) (*Reader, error) {
+	return openSource(source, size, nil)
+}
+
+// ReadManifest reads and validates only the bounded atlas header and section
+// directory. Component content is validated by opening or explicitly verifying.
+func ReadManifest(source io.ReaderAt, size int64) (Manifest, error) {
+	var m Manifest
+	if size < headerSize {
+		return m, errors.New("truncated atlas header")
 	}
 	header := make([]byte, headerSize)
-	if _, err = f.ReadAt(header, 0); err != nil {
-		return fail(err)
+	if _, err := source.ReadAt(header, 0); err != nil {
+		return m, err
 	}
 	if string(header[:8]) != "PLSSATL1" {
-		return fail(errors.New("not a completed experimental atlas"))
+		return m, errors.New("not a completed experimental atlas")
 	}
-	n := int(binary.LittleEndian.Uint32(header[8:12]))
-	if n > headerSize-12 {
-		return fail(errors.New("bad atlas manifest length"))
+	length := binary.LittleEndian.Uint32(header[8:12])
+	if length > headerSize-12 {
+		return m, errors.New("bad atlas manifest length")
 	}
+	n := int(length)
 	decoder := json.NewDecoder(bytes.NewReader(header[12 : 12+n]))
 	decoder.UseNumber()
-	if err = decoder.Decode(&a.Manifest); err != nil {
-		return fail(err)
+	if err := decoder.Decode(&m); err != nil {
+		return m, err
 	}
-	if a.Manifest.Format != "PLSSATL1" {
-		return fail(errors.New("unsupported atlas format"))
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return m, errors.New("trailing atlas manifest content")
+	}
+	if m.Format != "PLSSATL1" {
+		return m, errors.New("unsupported atlas format")
+	}
+	for name := range m.Sections {
+		if name != "keys" && name != "index" && name != "geometry" && name != "attributes" {
+			return m, fmt.Errorf("unknown atlas section %q", name)
+		}
 	}
 	last := int64(headerSize)
 	for _, name := range []string{"keys", "index", "geometry", "attributes"} {
-		s, ok := a.Manifest.Sections[name]
+		s, ok := m.Sections[name]
 		if name == "attributes" && !ok {
 			continue
 		}
-		if !ok || s.Offset != last || s.Size <= 0 || s.Size > info.Size()-last {
-			return fail(fmt.Errorf("invalid %s section", name))
+		if !ok || s.Offset != last || s.Size <= 0 || s.Size > size-last {
+			return m, fmt.Errorf("invalid %s section", name)
 		}
 		last += s.Size
 	}
-	if last != info.Size() {
-		return fail(errors.New("unexpected atlas length"))
+	if last != size || len(m.Sections) < 3 || len(m.Sections) > 4 {
+		return m, errors.New("unexpected atlas length or sections")
 	}
+	return m, nil
+}
+
+func openSource(source io.ReaderAt, size int64, data []byte) (*Reader, error) {
+	m, err := ReadManifest(source, size)
+	if err != nil {
+		return nil, err
+	}
+	a := &Reader{Manifest: m, source: source}
+	fail := func(err error) (*Reader, error) { return nil, err }
+	mapped := data != nil
 	section := func(name string) (*io.SectionReader, int64) {
 		s := a.Manifest.Sections[name]
 		return io.NewSectionReader(source, s.Offset, s.Size), s.Size
@@ -180,7 +223,7 @@ func open(path string, mapped bool) (*Reader, error) {
 	r, size := section("keys")
 	if mapped {
 		s := a.Manifest.Sections["keys"]
-		a.Keys, err = keyindex.OpenView(a.mapping.Bytes[s.Offset : s.Offset+s.Size])
+		a.Keys, err = keyindex.OpenView(data[s.Offset : s.Offset+s.Size])
 	} else {
 		a.Keys, err = keyindex.Open(r, size)
 	}
@@ -189,7 +232,7 @@ func open(path string, mapped bool) (*Reader, error) {
 	}
 	if mapped {
 		s := a.Manifest.Sections["index"]
-		a.view, err = spatialindex.OpenView(a.mapping.Bytes[s.Offset : s.Offset+s.Size])
+		a.view, err = spatialindex.OpenView(data[s.Offset : s.Offset+s.Size])
 	} else {
 		r, size = section("index")
 		a.Index, err = spatialindex.Open(r, 0, size)
@@ -199,7 +242,7 @@ func open(path string, mapped bool) (*Reader, error) {
 	}
 	r, size = section("geometry")
 	if mapped {
-		a.Geometry, err = compactgeom.OpenReaderAtWithOptions(r, size, compactgeom.ReaderOptions{VertexCachePages: 0, GeometryCacheBlocks: 16})
+		a.Geometry, err = compactgeom.OpenReaderAtWithOptions(r, size, compactgeom.ReaderOptions{VertexCachePages: 0, VertexCacheBlocks: 64, GeometryCacheBlocks: 16})
 	} else {
 		a.Geometry, err = compactgeom.OpenReaderAt(r, size)
 	}
@@ -236,7 +279,10 @@ func (a *Reader) Close() error {
 			return err
 		}
 	}
-	return a.File.Close()
+	if a.File != nil {
+		return a.File.Close()
+	}
+	return nil
 }
 func (a *Reader) IndexMemoryBytes() int64 {
 	if a.view != nil {
@@ -245,10 +291,19 @@ func (a *Reader) IndexMemoryBytes() int64 {
 	return a.Index.MemoryBytes()
 }
 func (a *Reader) Verify() error {
+	return a.VerifyContext(context.Background())
+}
+
+// VerifyContext checks cancellation between structural validation passes and
+// throughout component hashing. It never changes the underlying atlas.
+func (a *Reader) VerifyContext(ctx context.Context) error {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	if a.closed {
 		return os.ErrClosed
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	if err := a.Keys.Validate(); err != nil {
 		return err
@@ -265,9 +320,12 @@ func (a *Reader) Verify() error {
 	if err := coverageErr; err != nil {
 		return err
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	for name, s := range a.Manifest.Sections {
 		h := sha256.New()
-		if _, err := io.Copy(h, io.NewSectionReader(a.File, s.Offset, s.Size)); err != nil {
+		if _, err := io.Copy(h, contextReader{ctx: ctx, reader: io.NewSectionReader(a.source, s.Offset, s.Size)}); err != nil {
 			return err
 		}
 		if hex.EncodeToString(h.Sum(nil)) != s.SHA256 {
@@ -275,6 +333,18 @@ func (a *Reader) Verify() error {
 		}
 	}
 	return nil
+}
+
+type contextReader struct {
+	ctx    context.Context
+	reader io.Reader
+}
+
+func (r contextReader) Read(p []byte) (int, error) {
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return r.reader.Read(p)
 }
 
 type Hit struct {
@@ -360,8 +430,9 @@ func (a *Reader) FindID(kind, id string) ([]Hit, error) {
 	}
 	if len(rows) == 0 {
 		field := map[string]string{"township": "PLSSID", "section": "FRSTDIVID", "division": "SECDIVID", "intersected": "SECDIVID", "survey": "SURVID"}[kind]
+		layer := map[string]string{"township": "township", "section": "section", "division": "intersected", "intersected": "intersected", "survey": "intersected"}[kind]
 		for _, r := range a.Manifest.Unlocated {
-			if r.Attributes[field] == id {
+			if r.Layer == layer && r.Attributes[field] == id {
 				return nil, plss.ErrNoGeometry
 			}
 		}

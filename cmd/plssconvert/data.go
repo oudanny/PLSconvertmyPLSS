@@ -9,6 +9,8 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/oudanny/PLSconvertmyPLSS/plss"
@@ -19,9 +21,11 @@ const dataUsage = `Manage offline PLSS data packs:
   plssconvert data info --db data/nevada.sqlite [--json]
   plssconvert data unlocated --db data/nevada.sqlite [--json]
 
-Download retrieves Nevada's published townships, sections, and subdivisions
+Supported states: AZ, CA, CO, ID, MT, NM, NV, OR, UT, WA, WY.
+Download retrieves the selected state's published townships, sections, and subdivisions
 from BLM and builds a local SQLite spatial index. It requires internet access
 and may take several minutes. Existing output files are never overwritten.
+Empty source layers are retained as zero counts; an entirely empty state is rejected.
 Use a completed pack with --db on any conversion command; no network is used.
 `
 
@@ -42,8 +46,8 @@ func runData(args []string, stdout, stderr io.Writer) error {
 	var timeout time.Duration
 	fs.BoolVar(&asJSON, "json", false, "write pack metadata as JSON")
 	if command == "download" {
-		fs.StringVar(&path, "out", "data/nevada.sqlite", "new output pack path (must not exist)")
-		fs.StringVar(&state, "state", "NV", "state abbreviation; initially NV only")
+		fs.StringVar(&path, "out", "", "new output pack path (default data/<state>.sqlite; NV: data/nevada.sqlite)")
+		fs.StringVar(&state, "state", "NV", "state abbreviation: "+strings.Join(plss.SupportedDownloadStates(), ", "))
 		fs.StringVar(&serviceURL, "service-url", "", "override BLM service URL")
 		fs.IntVar(&workers, "workers", 4, "concurrent download requests (1–8)")
 		fs.DurationVar(&timeout, "timeout", 60*time.Minute, "total download and build deadline")
@@ -58,6 +62,17 @@ func runData(args []string, stdout, stderr io.Writer) error {
 	}
 	if fs.NArg() != 0 {
 		return fmt.Errorf("unexpected argument %q", fs.Arg(0))
+	}
+	if command == "download" && path == "" {
+		state = strings.ToUpper(strings.TrimSpace(state))
+		if state == "" {
+			state = "NV"
+		}
+		name := strings.ToLower(state)
+		if state == "NV" {
+			name = "nevada"
+		}
+		path = filepath.Join("data", name+".sqlite")
 	}
 	if path == "" {
 		return errors.New("provide a pack path")

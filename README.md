@@ -6,7 +6,7 @@ A Go command-line app and reusable library for converting latitude/longitude and
 - UTM: WGS 84, northern and southern hemispheres, with Norway and Svalbard zone exceptions.
 - PLSS: township/range/section, available aliquot subdivisions and government lots, or exact BLM identifiers.
 - Plain-text or JSON output, with optional polygon geometry.
-- Coordinate conversions run offline. PLSS queries can use BLM's public REST service or a local Nevada data pack; no API key is required.
+- Coordinate conversions run offline. PLSS queries can use BLM's public REST service, a state SQLite pack, or an experimental compact western-US atlas; no API key is required.
 
 PLSS describes an **area**, so converting PLSS to latitude/longitude returns a representative point inside a published polygon. It is not a surveyed corner or a unique coordinate for the land description. Coordinate-to-PLSS results depend on published coverage and may include multiple matches on boundaries.
 
@@ -69,9 +69,9 @@ For exact IDs, `--layer` accepts `township` (`PLSSID`), `section` (`FRSTDIVID`),
 
 Run `plssconvert <command> --help` for all flags. Place flags after the command. Quote coordinate strings containing spaces or symbols. `--json` produces machine-readable output; `--geometry` includes rings with coordinates ordered **longitude, latitude** and requires `--json`. `--timeout` controls the online request deadline, and `--service-url` can point to a compatible ArcGIS service.
 
-## Offline Nevada PLSS
+## Offline state PLSS
 
-Download Nevada's published townships, sections and intersected subdivisions once, then use the resulting SQLite pack without a network connection:
+Download a state's published townships, sections and intersected subdivisions once, then use the resulting SQLite pack without a network connection. Supported states are AZ, CA, CO, ID, MT, NM, NV, OR, UT, WA and WY:
 
 ```sh
 plssconvert data download --state NV --out data/nevada.sqlite
@@ -152,7 +152,37 @@ The snippet belongs inside a function returning `error` and uses imports `contex
 
 For offline queries, `plss.OpenPack(path)` returns a local provider with the same `Lookup`, `Find` and `FindID` methods. Close it when finished. Both the HTTP client and local pack implement `plss.Provider`; see the [offline library example](docs/offline-nevada.md#go-library).
 
-The portability target is one desktop executable plus one local data file, with western-US coverage as the longer-term goal. A new [compact atlas experiment](docs/compact-atlas.md) builds a complete **65.2 MB Nevada lookup file** with exact geometry and published IDs, or **128.8 MB including every original attribute**. The separate `plssatlas` command runs these files. The stable `plssconvert` command still uses SQLite packs. See [earlier measurements](docs/performance.md) for the original format; Nevada is currently the supported download region.
+The public `offline` library and `plssatlas` CLI read compact state or multi-state files. A western bundle contains the **11 contiguous western states in one file**, preserving original polygon coordinates and published identifiers. State readers open on demand. See [western atlas builds and measurements](docs/western-atlas.md) for exact scope, sizes, verification and remaining limitations. The stable `plssconvert` command continues to use SQLite packs and supports structured township/range descriptions; the experimental compact reader currently accepts exact published IDs.
+
+```sh
+go install github.com/oudanny/PLSconvertmyPLSS/cmd/plssbuild@latest
+go install github.com/oudanny/PLSconvertmyPLSS/cmd/plssatlas@latest
+plssbuild west --work-dir data/west --out data/western-us.atlas
+plssatlas latlon --value '40.015,-105.2705' --data data/western-us.atlas
+```
+
+The builder downloads missing sources, verifies every geometry and identifier,
+and reuses completed state files on a later run. An interrupted state download
+restarts that state. Build on a machine with network access and temporary disk
+space; the finished converter needs only its executable and the atlas file.
+To reuse an existing Nevada source, add `--source NV=data/nevada.sqlite`.
+
+For repeated lookups, keep one `offline.Reader` open:
+
+```go
+reader, err := offline.Open("data/western-us.atlas")
+if err != nil { return err }
+defer reader.Close()
+hits, err := reader.Lookup(context.Background(), 40.015, -105.2705)
+if err != nil { return err }
+for _, hit := range hits { fmt.Println(hit.State, hit.ID) }
+```
+
+This snippet uses `github.com/oudanny/PLSconvertmyPLSS/offline`, `context`, and
+`fmt` inside a function returning `error`. `FindID` and `Representative` perform
+the reverse conversion without loading archival attributes. The compact format
+is experimental; retain source packs and use a matching builder/reader version.
+The [original Nevada report](docs/compact-atlas.md) records the earlier design.
 
 ## Data source and accuracy
 
@@ -165,7 +195,7 @@ This project uses BLM data but is not affiliated with or endorsed by BLM. It doe
 ```sh
 go test ./...
 go vet ./...
-go build ./cmd/plssconvert
+go build ./cmd/...
 ```
 
 Unit tests use local HTTP fixtures and small generated packs, so normal test runs do not depend on the live BLM service or a full Nevada download. GitHub Actions runs tests, vet and builds on Linux, Windows and macOS, including the minimum supported Go version on Linux. The full downloaded data packs are excluded from Git.

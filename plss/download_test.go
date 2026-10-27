@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -350,12 +351,159 @@ func TestDownloadServiceErrorsAndOptions(t *testing.T) {
 	if _, err := d.post(context.Background(), 1, url.Values{"f": {"json"}}); err == nil || !strings.Contains(err.Error(), "bad query") || calls.Load() != 1 {
 		t.Fatalf("nonretryable error: %v", err)
 	}
-	for _, o := range []DownloadOptions{{State: "CA"}, {Workers: 9}, {Workers: -1}, {BaseURL: "file:///tmp"}, {BaseURL: "http://example.com?x=1"}} {
+	for _, o := range []DownloadOptions{{State: "TX"}, {Workers: 9}, {Workers: -1}, {BaseURL: "file:///tmp"}, {BaseURL: "http://example.com?x=1"}} {
 		if _, e := DownloadPack(context.Background(), filepath.Join(t.TempDir(), "x.sqlite"), o); e == nil {
 			t.Errorf("accepted invalid options: %+v", o)
 		}
 	}
 	if retryAfter("999999999") != 30*time.Second || retryAfter("-2") != 0 || retryAfter("2") != 2*time.Second {
 		t.Fatal("incorrect Retry-After bounds")
+	}
+}
+
+func TestSupportedDownloadStatesAreIndependent(t *testing.T) {
+	want := []string{"AZ", "CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY"}
+	states := SupportedDownloadStates()
+	if !reflect.DeepEqual(states, want) {
+		t.Fatalf("supported states: %v", states)
+	}
+	states[0] = "TX"
+	if !reflect.DeepEqual(SupportedDownloadStates(), want) {
+		t.Fatal("caller changed the supported state list")
+	}
+	var calls atomic.Int32
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { calls.Add(1) }))
+	defer s.Close()
+	for _, state := range []string{"TX", "AK", "HI", "NV' OR 1=1 --", "N_V", "N%", "N V"} {
+		_, err := DownloadPack(context.Background(), filepath.Join(t.TempDir(), "state.sqlite"), DownloadOptions{State: state, BaseURL: s.URL, HTTPClient: s.Client()})
+		if err == nil || !strings.Contains(err.Error(), "unsupported download state") {
+			t.Errorf("accepted invalid state %q: %v", state, err)
+		}
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("invalid state caused %d network requests", calls.Load())
+	}
+}
+
+func TestDownloadWesternStatesWithEmptyLayers(t *testing.T) {
+	for index, state := range SupportedDownloadStates() {
+		t.Run(state, func(t *testing.T) {
+			// Rotate the populated layer so both empty parents and empty
+			// subdivisions are exercised. Empty layers require no batch query.
+			populated := 1 + index%3
+			var batches atomic.Int32
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if err := r.ParseForm(); err != nil {
+					t.Error(err)
+					return
+				}
+				var layer int
+				if _, err := fmt.Sscanf(r.URL.Path, "/%d/query", &layer); err != nil {
+					t.Error(err)
+					return
+				}
+				if r.Form.Get("returnIdsOnly") == "true" {
+					if got := r.Form.Get("where"); got != "PLSSID LIKE '"+state+"%'" {
+						t.Errorf("state filter: %q", got)
+					}
+					ids := []int64{}
+					if layer == populated {
+						ids = []int64{7}
+					}
+					_ = json.NewEncoder(w).Encode(map[string]any{"objectIdFieldName": "OBJECTID", "objectIds": ids})
+					return
+				}
+				batches.Add(1)
+				if layer != populated || r.Form.Get("objectIds") != "7" {
+					t.Errorf("unexpected batch: layer=%d params=%v", layer, r.Form)
+				}
+				feature := downloadTestFeature(7)
+				attrs := feature["attributes"].(map[string]any)
+				attrs["PLSSID"] = state + "210010N0010E0"
+				attrs["STATEABBR"] = state
+				_ = json.NewEncoder(w).Encode(map[string]any{"features": []any{feature}})
+			}))
+			defer s.Close()
+			progress := map[int]DownloadProgress{}
+			path := filepath.Join(t.TempDir(), "state.sqlite")
+			meta, err := DownloadPack(context.Background(), path, DownloadOptions{State: " " + strings.ToLower(state) + " ", BaseURL: s.URL, HTTPClient: s.Client(), Progress: func(p DownloadProgress) { progress[p.Layer] = p }})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if meta.State != state || batches.Load() != 1 {
+				t.Fatalf("state/batches: %+v %d", meta, batches.Load())
+			}
+			for i, name := range []string{"township", "section", "intersected"} {
+				want := 0
+				if i+1 == populated {
+					want = 1
+				}
+				p, ok := progress[i+1]
+				if !ok || p.Completed != want || p.Total != want || meta.Counts[name] != want || meta.UnlocatedCounts[name] != 0 {
+					t.Fatalf("incorrect count/progress for %s: %+v %+v", name, meta, progress)
+				}
+			}
+			pack, err := OpenPack(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer pack.Close()
+			hits, err := pack.Lookup(context.Background(), 39.005, -115.995)
+			if err != nil || len(hits) != 1 {
+				t.Fatalf("pack with empty layers failed lookup: %+v %v", hits, err)
+			}
+		})
+	}
+}
+
+func TestDownloadSnapshotDistinguishesEmptyFromMalformed(t *testing.T) {
+	for _, tc := range []struct {
+		name, response string
+		valid          bool
+	}{
+		{"empty", `{"objectIdFieldName":"OBJECTID","objectIds":[]}`, true},
+		{"missing_ids", `{"objectIdFieldName":"OBJECTID"}`, false},
+		{"null_ids", `{"objectIdFieldName":"OBJECTID","objectIds":null}`, false},
+		{"missing_field", `{"objectIds":[]}`, false},
+		{"blank_field", `{"objectIdFieldName":" ","objectIds":[]}`, false},
+		{"wrong_ids_type", `{"objectIdFieldName":"OBJECTID","objectIds":{}}`, false},
+		{"truncated_empty", `{"objectIdFieldName":"OBJECTID","objectIds":[],"exceededTransferLimit":true}`, false},
+		{"invalid_id", `{"objectIdFieldName":"OBJECTID","objectIds":[0]}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(tc.response)) }))
+			defer s.Close()
+			d := packDownloader{base: s.URL, http: s.Client()}
+			snapshot, err := d.snapshot(context.Background(), 3, "WA")
+			if (err == nil) != tc.valid {
+				t.Fatalf("snapshot: %+v %v", snapshot, err)
+			}
+			if tc.valid && (snapshot.layer != 3 || snapshot.field != "OBJECTID" || len(snapshot.ids) != 0) {
+				t.Fatalf("incorrect empty snapshot: %+v", snapshot)
+			}
+		})
+	}
+}
+
+func TestDownloadEntirelyEmptyStateDoesNotPublish(t *testing.T) {
+	var calls atomic.Int32
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		_ = r.ParseForm()
+		if r.Form.Get("returnIdsOnly") != "true" {
+			t.Error("empty state requested a feature batch")
+		}
+		_, _ = w.Write([]byte(`{"objectIdFieldName":"OBJECTID","objectIds":[]}`))
+	}))
+	defer s.Close()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.sqlite")
+	_, err := DownloadPack(context.Background(), path, DownloadOptions{State: "WA", BaseURL: s.URL, HTTPClient: s.Client()})
+	if err == nil || !strings.Contains(err.Error(), "no published records for WA") || calls.Load() != 3 {
+		t.Fatalf("entirely empty state: %v calls=%d", err, calls.Load())
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("empty state created files: %v %v", entries, err)
 	}
 }

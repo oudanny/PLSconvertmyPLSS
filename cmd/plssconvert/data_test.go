@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -91,7 +93,7 @@ func TestPackInfoAndFlags(t *testing.T) {
 	}
 	for _, args := range [][]string{
 		{"data", "bogus"}, {"data", "info"}, {"data", "download", "--workers", "0"},
-		{"data", "download", "--timeout", "0s"}, {"data", "download", "--state", "CO"},
+		{"data", "download", "--timeout", "0s"}, {"data", "download", "--state", "TX"},
 		{"latlon", "--value", "39,-119", "--db", path, "--service-url", "https://example.invalid"},
 		{"latlon", "--value", "39,-119", "--db", filepath.Join(t.TempDir(), "missing.sqlite")},
 	} {
@@ -102,6 +104,60 @@ func TestPackInfoAndFlags(t *testing.T) {
 	for _, args := range [][]string{{"data"}, {"data", "--help"}, {"data", "download", "--help"}, {"data", "info", "--help"}, {"data", "unlocated", "--help"}} {
 		if _, _, err := execute(t, args...); err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+func TestWesternStateDownloadCommand(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			t.Error(err)
+			return
+		}
+		if r.Form.Get("returnIdsOnly") == "true" {
+			if r.Form.Get("where") != "PLSSID LIKE 'CA%'" {
+				t.Errorf("wrong state filter: %v", r.Form)
+			}
+			ids := []int{}
+			if strings.HasPrefix(r.URL.Path, "/1/") {
+				ids = []int{1}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"objectIdFieldName": "OBJECTID", "objectIds": ids})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"features": []any{map[string]any{
+			"attributes": map[string]any{"OBJECTID": 1, "STATEABBR": "CA", "PLSSID": "CA210010N0010E0"},
+			"geometry":   plss.Geometry{Rings: [][][]float64{{{-120, 39}, {-119.99, 39}, {-119.99, 39.01}, {-120, 39.01}, {-120, 39}}}},
+		}}})
+	}))
+	defer s.Close()
+	path := filepath.Join(t.TempDir(), "california.sqlite")
+	var stdout, stderr bytes.Buffer
+	err := run([]string{"data", "download", "--state", " ca ", "--out", path, "--service-url", s.URL, "--json"}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		Path     string            `json:"path"`
+		Metadata plss.PackMetadata `json:"metadata"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Path != path || result.Metadata.State != "CA" || result.Metadata.Counts["township"] != 1 || result.Metadata.Counts["section"] != 0 || result.Metadata.Counts["intersected"] != 0 {
+		t.Fatalf("download result: %+v", result)
+	}
+	if !strings.Contains(stderr.String(), "Layer 3: 0 / 0 features") {
+		t.Fatalf("empty layer omitted from progress: %s", stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if err := run([]string{"data", "download", "--help"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, state := range plss.SupportedDownloadStates() {
+		if !strings.Contains(stderr.String(), state) {
+			t.Errorf("download help omitted %s: %s", state, stderr.String())
 		}
 	}
 }

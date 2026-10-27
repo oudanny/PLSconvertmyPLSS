@@ -37,4 +37,4 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.go == 'stable'
         env:
           CGO_ENABLED: '1'
-        run: go test -race ./internal/atlas ./internal/columns ./internal/compactgeom ./internal/keyindex ./internal/spatialindex
+        run: go test -race ./internal/atlas ./internal/columns ./internal/compactgeom ./internal/keyindex ./internal/spatialindex ./internal/regionatlas ./offline

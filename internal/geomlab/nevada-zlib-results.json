@@ -1,0 +1,159 @@
+[
+  {
+    "path": "data/topolab/lossless.cgeom",
+    "metadata": {
+      "version": 1,
+      "vertex_codec": 0,
+      "raw_vertex_bytes": 25288896,
+      "features": 1510482,
+      "unique_xy_vertices": 1580556,
+      "quantization_decimals": 0,
+      "records_per_block": 128,
+      "file_bytes": 41321472,
+      "vertex_table_bytes": 25288896,
+      "compressed_record_block_bytes": 15843632,
+      "directory_bytes": 188816,
+      "maximum_latitude_error_degrees": 0,
+      "maximum_longitude_error_degrees": 0,
+      "collapsed_nonzero_xy_edges": 0,
+      "new_zero_area_rings": 0,
+      "ring_orientation_changes": 0,
+      "vertices_with_extra_ordinates": 0
+    },
+    "repack_seconds": 0,
+    "verified_records": 0,
+    "verify_seconds": 0,
+    "warm_os_cache_median_of_three_timings": [
+      {
+        "mode": "bounded-random",
+        "ns_per_record": 38470.79,
+        "allocated_bytes_per_record": 14791.3496,
+        "allocations_per_record": 39.9182
+      },
+      {
+        "mode": "bounded-hot16",
+        "ns_per_record": 1633.41875,
+        "allocated_bytes_per_record": 591.5,
+        "allocations_per_record": 3.9375
+      },
+      {
+        "mode": "preloaded-random",
+        "ns_per_record": 32128.2,
+        "allocated_bytes_per_record": 4898.9576,
+        "allocations_per_record": 32.8072
+      },
+      {
+        "mode": "preloaded-hot16",
+        "ns_per_record": 1317.1,
+        "allocated_bytes_per_record": 591.5,
+        "allocations_per_record": 3.9375
+      }
+    ]
+  },
+  {
+    "path": "data\\geomlab\\lossless-xor-shuffle-128.cgeom",
+    "metadata": {
+      "version": 2,
+      "vertex_codec": 1,
+      "vertices_per_block": 128,
+      "raw_vertex_bytes": 25288896,
+      "vertex_directory_bytes": 197584,
+      "features": 1510482,
+      "unique_xy_vertices": 1580556,
+      "quantization_decimals": 0,
+      "records_per_block": 128,
+      "file_bytes": 34953575,
+      "vertex_table_bytes": 18723415,
+      "compressed_record_block_bytes": 15843632,
+      "directory_bytes": 386400,
+      "maximum_latitude_error_degrees": 0,
+      "maximum_longitude_error_degrees": 0,
+      "collapsed_nonzero_xy_edges": 0,
+      "new_zero_area_rings": 0,
+      "ring_orientation_changes": 0,
+      "vertices_with_extra_ordinates": 0
+    },
+    "repack_seconds": 1.1577645,
+    "verified_records": 1510482,
+    "verify_seconds": 15.8791742,
+    "warm_os_cache_median_of_three_timings": [
+      {
+        "mode": "bounded-random",
+        "ns_per_record": 109826.99,
+        "allocated_bytes_per_record": 11915.6272,
+        "allocations_per_record": 87.5541
+      },
+      {
+        "mode": "bounded-hot16",
+        "ns_per_record": 2941.50625,
+        "allocated_bytes_per_record": 591.5,
+        "allocations_per_record": 3.9375
+      },
+      {
+        "mode": "preloaded-random",
+        "ns_per_record": 48173.85,
+        "allocated_bytes_per_record": 4891.6504,
+        "allocations_per_record": 32.8057
+      },
+      {
+        "mode": "preloaded-hot16",
+        "ns_per_record": 1856.6125,
+        "allocated_bytes_per_record": 591.5,
+        "allocations_per_record": 3.9375
+      }
+    ]
+  },
+  {
+    "path": "data\\geomlab\\lossless-xor-shuffle-256.cgeom",
+    "metadata": {
+      "version": 2,
+      "vertex_codec": 1,
+      "vertices_per_block": 256,
+      "raw_vertex_bytes": 25288896,
+      "vertex_directory_bytes": 98800,
+      "features": 1510482,
+      "unique_xy_vertices": 1580556,
+      "quantization_decimals": 0,
+      "records_per_block": 128,
+      "file_bytes": 34169711,
+      "vertex_table_bytes": 18038335,
+      "compressed_record_block_bytes": 15843632,
+      "directory_bytes": 287616,
+      "maximum_latitude_error_degrees": 0,
+      "maximum_longitude_error_degrees": 0,
+      "collapsed_nonzero_xy_edges": 0,
+      "new_zero_area_rings": 0,
+      "ring_orientation_changes": 0,
+      "vertices_with_extra_ordinates": 0
+    },
+    "repack_seconds": 0.8737332,
+    "verified_records": 1510482,
+    "verify_seconds": 9.9916918,
+    "warm_os_cache_median_of_three_timings": [
+      {
+        "mode": "bounded-random",
+        "ns_per_record": 147500.64,
+        "allocated_bytes_per_record": 15878.3984,
+        "allocations_per_record": 65.3506
+      },
+      {
+        "mode": "bounded-hot16",
+        "ns_per_record": 1222.4125,
+        "allocated_bytes_per_record": 591.5,
+        "allocations_per_record": 3.9375
+      },
+      {
+        "mode": "preloaded-random",
+        "ns_per_record": 30350.15,
+        "allocated_bytes_per_record": 4891.6504,
+        "allocations_per_record": 32.8057
+      },
+      {
+        "mode": "preloaded-hot16",
+        "ns_per_record": 1180.73125,
+        "allocated_bytes_per_record": 591.5,
+        "allocations_per_record": 3.9375
+      }
+    ]
+  }
+]
