@@ -104,6 +104,7 @@ type Reader struct {
 	Geometry   *compactgeom.Reader
 	Attributes *columns.Reader
 	source     io.ReaderAt
+	prepared   *preparedCache
 }
 
 func Open(path string) (*Reader, error) { return open(path, false) }
@@ -213,7 +214,7 @@ func openSource(source io.ReaderAt, size int64, data []byte) (*Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	a := &Reader{Manifest: m, source: source}
+	a := &Reader{Manifest: m, source: source, prepared: newPreparedCache(preparedCacheBytes)}
 	fail := func(err error) (*Reader, error) { return nil, err }
 	mapped := data != nil
 	section := func(name string) (*io.SectionReader, int64) {
@@ -273,6 +274,7 @@ func (a *Reader) Close() error {
 		return nil
 	}
 	a.closed = true
+	a.prepared = nil
 	if a.mapping != nil {
 		if err := a.mapping.Close(); err != nil {
 			a.File.Close()
@@ -395,7 +397,7 @@ func (a *Reader) Lookup(ctx context.Context, lat, lon float64) ([]Hit, error) {
 			if err := ctx.Err(); err != nil {
 				return nil, err
 			}
-			g, err := a.Geometry.Record(candidate.ID)
+			g, err := a.preparedGeometry(candidate.ID)
 			if err != nil {
 				return nil, err
 			}

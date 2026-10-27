@@ -92,3 +92,25 @@ func TestUnlocatedReferencesDoNotInventParentLayerRecords(t *testing.T) {
 		r.Close()
 	}
 }
+
+func TestPreparedLookupDoesNotAliasReturnedFullGeometry(t *testing.T) {
+	f := buildFixture(t, false, 0, 8)
+	want, err := f.reader.Lookup(context.Background(), .1, .1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	full, err := f.reader.Full(want[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ring := range full.Geometry.Rings {
+		for _, v := range ring {
+			v[0] += 80
+			v[1] += 40
+		}
+	}
+	got, err := f.reader.Lookup(context.Background(), .1, .1)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("returned Full mutated prepared cache: %+v %v", got, err)
+	}
+}
