@@ -1,0 +1,72 @@
+[
+  {
+    "mode": "uncompressed-pages",
+    "vertices_per_block": 256,
+    "actual_file_bytes": 25288896,
+    "directory_bytes": 0,
+    "random_vertex_ns": 8361.02,
+    "hot16_vertex_ns": 18.640625,
+    "cache_payload_limit_bytes": 262144,
+    "build_seconds": 0
+  },
+  {
+    "mode": "raw",
+    "vertices_per_block": 256,
+    "actual_file_bytes": 21854710,
+    "directory_bytes": 98800,
+    "random_vertex_ns": 44358.11,
+    "hot16_vertex_ns": 18.23125,
+    "cache_payload_limit_bytes": 262144,
+    "build_seconds": 0.7692431
+  },
+  {
+    "mode": "shuffle",
+    "vertices_per_block": 256,
+    "actual_file_bytes": 18954986,
+    "directory_bytes": 98800,
+    "random_vertex_ns": 36356.31,
+    "hot16_vertex_ns": 16.573125,
+    "cache_payload_limit_bytes": 262144,
+    "build_seconds": 0.4827706
+  },
+  {
+    "mode": "xor-shuffle",
+    "vertices_per_block": 256,
+    "actual_file_bytes": 18137199,
+    "directory_bytes": 98800,
+    "random_vertex_ns": 39271.12,
+    "hot16_vertex_ns": 18.31125,
+    "cache_payload_limit_bytes": 262144,
+    "build_seconds": 0.5611877
+  },
+  {
+    "mode": "raw",
+    "vertices_per_block": 1024,
+    "actual_file_bytes": 21343019,
+    "directory_bytes": 24704,
+    "random_vertex_ns": 184804.45,
+    "hot16_vertex_ns": 24.59,
+    "cache_payload_limit_bytes": 1048576,
+    "build_seconds": 0.4415727
+  },
+  {
+    "mode": "shuffle",
+    "vertices_per_block": 1024,
+    "actual_file_bytes": 18667613,
+    "directory_bytes": 24704,
+    "random_vertex_ns": 157874.22,
+    "hot16_vertex_ns": 28.310625,
+    "cache_payload_limit_bytes": 1048576,
+    "build_seconds": 0.3967383
+  },
+  {
+    "mode": "xor-shuffle",
+    "vertices_per_block": 1024,
+    "actual_file_bytes": 17620528,
+    "directory_bytes": 24704,
+    "random_vertex_ns": 150114.76,
+    "hot16_vertex_ns": 18.748125,
+    "cache_payload_limit_bytes": 1048576,
+    "build_seconds": 0.4927732
+  }
+]

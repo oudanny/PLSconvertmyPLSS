@@ -1,5 +1,10 @@
 # Offline size and lookup performance
 
+The [subsequent complete-file atlas experiment](compact-atlas.md) supersedes the
+sample-only size estimates below: 65.2 MB for exact geometry and IDs, or 128.8 MB
+including all original attributes. This page records the earlier baseline and
+the first codec experiments.
+
 The deployment target is a desktop or laptop with one executable and one local
 data file. The longer-term coverage target is the western United States. Nevada
 is the measured pilot; western-US size and latency have not yet been measured.

@@ -32,4 +32,9 @@ jobs:
       - name: Vet
         run: go vet ./...
       - name: Build
-        run: go build ./cmd/plssconvert
+        run: go build ./cmd/...
+      - name: Race check compact readers
+        if: matrix.os == 'ubuntu-latest' && matrix.go == 'stable'
+        env:
+          CGO_ENABLED: '1'
+        run: go test -race ./internal/atlas ./internal/columns ./internal/compactgeom ./internal/keyindex ./internal/spatialindex

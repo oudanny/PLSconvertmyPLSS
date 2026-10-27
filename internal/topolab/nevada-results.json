@@ -1,0 +1,135 @@
+{
+  "source": "data/nevada.sqlite",
+  "go_version": "go1.27.3",
+  "build_seconds": 44.8473166,
+  "total": {
+    "features": 1510482,
+    "rings": 1512994,
+    "vertex_occurrences": 9475179,
+    "bit_exact_closed_rings": 1512994,
+    "vertices_not_2d": 0,
+    "unique_bit_exact_xy": 1580556,
+    "edge_occurrences": 7962185,
+    "zero_xy_edge_occurrences": 0,
+    "unique_undirected_xy_edges": 2960042,
+    "unique_bit_exact_ordered_polygons": 1471479
+  },
+  "layers": {
+    "1": {
+      "features": 3380,
+      "rings": 3408,
+      "vertex_occurrences": 367730,
+      "bit_exact_closed_rings": 3408,
+      "vertices_not_2d": 0,
+      "unique_bit_exact_xy": 190435,
+      "edge_occurrences": 364322,
+      "zero_xy_edge_occurrences": 0,
+      "unique_undirected_xy_edges": 194108,
+      "unique_bit_exact_ordered_polygons": 3378
+    },
+    "2": {
+      "features": 112133,
+      "rings": 112231,
+      "vertex_occurrences": 1701815,
+      "bit_exact_closed_rings": 112231,
+      "vertices_not_2d": 0,
+      "unique_bit_exact_xy": 695961,
+      "edge_occurrences": 1589584,
+      "zero_xy_edge_occurrences": 0,
+      "unique_undirected_xy_edges": 808960,
+      "unique_bit_exact_ordered_polygons": 112121
+    },
+    "3": {
+      "features": 1394969,
+      "rings": 1397355,
+      "vertex_occurrences": 7405634,
+      "bit_exact_closed_rings": 1397355,
+      "vertices_not_2d": 0,
+      "unique_bit_exact_xy": 1575789,
+      "edge_occurrences": 6008279,
+      "zero_xy_edge_occurrences": 0,
+      "unique_undirected_xy_edges": 2949331,
+      "unique_bit_exact_ordered_polygons": 1364267
+    }
+  },
+  "ordinate_count_histogram": {
+    "2": 9475179
+  },
+  "candidates": [
+    {
+      "name": "lossless",
+      "path": "data\\topolab\\lossless.cgeom",
+      "metadata": {
+        "features": 1510482,
+        "unique_xy_vertices": 1580556,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 41321472,
+        "vertex_table_bytes": 25288896,
+        "compressed_record_block_bytes": 15843632,
+        "directory_bytes": 188816,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "verified_records": 1510482,
+      "verify_seconds": 4.5142076,
+      "random_decode_ns": 48511.06,
+      "random_decode_alloc_bytes": 14834.9528,
+      "random_decode_allocs": 39.7793
+    },
+    {
+      "name": "rounded-1e-7",
+      "path": "data\\topolab\\rounded-1e-7.cgeom",
+      "metadata": {
+        "features": 1510482,
+        "unique_xy_vertices": 1560821,
+        "quantization_decimals": 7,
+        "records_per_block": 128,
+        "file_bytes": 28493366,
+        "vertex_table_bytes": 12486568,
+        "compressed_record_block_bytes": 15817854,
+        "directory_bytes": 188816,
+        "maximum_latitude_error_degrees": 4.999994018817233e-8,
+        "maximum_longitude_error_degrees": 4.999998282073648e-8,
+        "collapsed_nonzero_xy_edges": 9286,
+        "new_zero_area_rings": 211,
+        "ring_orientation_changes": 67,
+        "vertices_with_extra_ordinates": 0
+      },
+      "verified_records": 1510482,
+      "verify_seconds": 2.5755227,
+      "random_decode_ns": 45469.82,
+      "random_decode_alloc_bytes": 14342.648,
+      "random_decode_allocs": 39.4142
+    },
+    {
+      "name": "rounded-1e-6",
+      "path": "data\\topolab\\rounded-1e-6.cgeom",
+      "metadata": {
+        "features": 1510482,
+        "unique_xy_vertices": 1541379,
+        "quantization_decimals": 6,
+        "records_per_block": 128,
+        "file_bytes": 28299555,
+        "vertex_table_bytes": 12331032,
+        "compressed_record_block_bytes": 15779579,
+        "directory_bytes": 188816,
+        "maximum_latitude_error_degrees": 4.999999774213393e-7,
+        "maximum_longitude_error_degrees": 4.999992455623214e-7,
+        "collapsed_nonzero_xy_edges": 48680,
+        "new_zero_area_rings": 873,
+        "ring_orientation_changes": 98,
+        "vertices_with_extra_ordinates": 0
+      },
+      "verified_records": 1510482,
+      "verify_seconds": 2.5095357,
+      "random_decode_ns": 45251.34,
+      "random_decode_alloc_bytes": 14286.8472,
+      "random_decode_allocs": 39.3319
+    }
+  ]
+}

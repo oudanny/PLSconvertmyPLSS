@@ -1,0 +1,99 @@
+{
+  "atlas_hot_cities": {
+    "queries": 10000,
+    "mean_us": 5.303979999999999,
+    "median_us": 4.1,
+    "p95_us": 12.2,
+    "p99_us": 14,
+    "allocated_bytes_per_query": 1290.9144,
+    "allocations_per_query": 34.4009
+  },
+  "atlas_spread": {
+    "queries": 10000,
+    "mean_us": 29.33295,
+    "median_us": 34.6,
+    "p95_us": 61.1,
+    "p99_us": 108.1,
+    "allocated_bytes_per_query": 4258.456,
+    "allocations_per_query": 42.1595
+  },
+  "cache_note": "Index uses owned arrays or borrowed mapped bytes; bounded geometry cache; OS pages warmed by verification; full metadata omitted from lightweight timings.",
+  "format": "PLSSATL1",
+  "geometry_metadata": {
+    "features": 1510482,
+    "unique_xy_vertices": 1580556,
+    "quantization_decimals": 0,
+    "records_per_block": 128,
+    "file_bytes": 41321472,
+    "vertex_table_bytes": 25288896,
+    "compressed_record_block_bytes": 15843632,
+    "directory_bytes": 188816,
+    "maximum_latitude_error_degrees": 0,
+    "maximum_longitude_error_degrees": 0,
+    "collapsed_nonzero_xy_edges": 0,
+    "new_zero_area_rings": 0,
+    "ring_orientation_changes": 0,
+    "vertices_with_extra_ordinates": 0
+  },
+  "go_version": "go1.27.3",
+  "index_array_bytes": 2416872,
+  "key_encoded_bytes": 7787439,
+  "mapped": true,
+  "open_us_os_cache_unspecified": 15668.8,
+  "path": "data/atlaslab/nevada-core.atlas",
+  "point_hits": 8142,
+  "reverse_id_and_representative": {
+    "queries": 10000,
+    "mean_us": 25.11229,
+    "median_us": 19.1,
+    "p95_us": 70.7,
+    "p99_us": 84.4,
+    "allocated_bytes_per_query": 1529.0064,
+    "allocations_per_query": 31.6732
+  },
+  "reverse_id_only": {
+    "queries": 10000,
+    "mean_us": 22.091330000000003,
+    "median_us": 17.4,
+    "p95_us": 70,
+    "p99_us": 76.3,
+    "allocated_bytes_per_query": 188.8768,
+    "allocations_per_query": 8.7517
+  },
+  "sections": {
+    "geometry": {
+      "offset": 23864249,
+      "size": 41321472,
+      "sha256": "faf35d55b7dd7e98f0a4ab4fa37f0bf5190e4784c8154adaf01f9bb78b66b870"
+    },
+    "index": {
+      "offset": 7852975,
+      "size": 16011274,
+      "sha256": "a2915b999cf08bc2d2d39cc7ab03c8a7880f4d6d9308e6cf054e898fe57243b0"
+    },
+    "keys": {
+      "offset": 65536,
+      "size": 7787439,
+      "sha256": "b1dbf288f27666b1655d5767a62ef56d674eeb1b1c9681e99116350475c59734"
+    }
+  },
+  "sqlite_hot_cities": {
+    "queries": 10000,
+    "mean_us": 343.73787,
+    "median_us": 315.1,
+    "p95_us": 509,
+    "p99_us": 597.1,
+    "allocated_bytes_per_query": 20928.6,
+    "allocations_per_query": 274.5807
+  },
+  "sqlite_spread": {
+    "queries": 10000,
+    "mean_us": 466.292,
+    "median_us": 436.9,
+    "p95_us": 647.3,
+    "p99_us": 842.3,
+    "allocated_bytes_per_query": 13345.7544,
+    "allocations_per_query": 193.5316
+  },
+  "verified_point_count": 11000
+}

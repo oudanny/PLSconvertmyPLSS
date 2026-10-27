@@ -1,0 +1,9 @@
+{
+  "trials": 20,
+  "atlas_median_ms": 21.88765,
+  "sqlite_median_ms": 17.702550000000002,
+  "atlas_p95_ms": 30.2766,
+  "sqlite_p95_ms": 19.2828,
+  "atlas_exe_bytes": 8963584,
+  "atlas_data_bytes": 65199261
+}

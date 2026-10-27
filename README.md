@@ -152,7 +152,7 @@ The snippet belongs inside a function returning `error` and uses imports `contex
 
 For offline queries, `plss.OpenPack(path)` returns a local provider with the same `Lookup`, `Find` and `FindID` methods. Close it when finished. Both the HTTP client and local pack implement `plss.Provider`; see the [offline library example](docs/offline-nevada.md#go-library).
 
-The portability target is one desktop executable plus one local data file, with western-US coverage as the longer-term goal. See [measured size, lookup performance and compact-format experiments](docs/performance.md). Nevada is currently the supported download region.
+The portability target is one desktop executable plus one local data file, with western-US coverage as the longer-term goal. A new [compact atlas experiment](docs/compact-atlas.md) builds a complete **65.2 MB Nevada lookup file** with exact geometry and published IDs, or **128.8 MB including every original attribute**. The separate `plssatlas` command runs these files. The stable `plssconvert` command still uses SQLite packs. See [earlier measurements](docs/performance.md) for the original format; Nevada is currently the supported download region.
 
 ## Data source and accuracy
 

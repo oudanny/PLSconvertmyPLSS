@@ -1,0 +1,152 @@
+{
+  "Source": "data/nevada.sqlite",
+  "GoVersion": "go1.27.3",
+  "Notes": "Complete source bbox indexes. Full/grid variants retain source float32 boxes exactly; quantized variants conservatively widen leaves and require no missed SQLite candidates. All-layer candidates only; excludes geometry/attributes/containment. 10000 seeded spread +1000 bbox boundary points by default. Custom queries use three warmed passes; Windows QueryPerformanceCounter timings include timestamp overhead. Index allocations use a separate untimed pass; SQLite allocation counts not measured. Resident array capacity excludes benchmark fixtures and transient builder memory. Open timings are warm-file; grid Open was not measured.",
+  "Entries": 1510482,
+  "RandomQueries": 10000,
+  "BoundaryQueries": 1000,
+  "TotalCandidates": 26006,
+  "SQL": {
+    "MedianUS": 153.9,
+    "P95US": 229.8,
+    "P99US": 296.2,
+    "MaxUS": 767.5,
+    "MeanUS": 149.49259090909092,
+    "CandidateAmplification": 1
+  },
+  "Variants": [
+    {
+      "Name": "packed-rtree8",
+      "FileBytes": 36899074,
+      "ResidentArrayBytes": 36899010,
+      "BuildSeconds": 0.2260852,
+      "OpenSeconds": 0.0525465,
+      "Query": {
+        "MedianUS": 1.6,
+        "P95US": 2.5,
+        "P99US": 3.1,
+        "MaxUS": 143.5,
+        "MeanUS": 1.4234,
+        "AllocatedBytesPerQuery": 83.36436363636363,
+        "AllocationsPerQuery": 3.573909090909091,
+        "CandidateAmplification": 1
+      }
+    },
+    {
+      "Name": "packed-rtree16",
+      "FileBytes": 34137058,
+      "ResidentArrayBytes": 34136994,
+      "BuildSeconds": 0.2305824,
+      "OpenSeconds": 0.0521111,
+      "Query": {
+        "MedianUS": 1.8,
+        "P95US": 3,
+        "P99US": 3.8,
+        "MaxUS": 168.1,
+        "MeanUS": 1.6184121212121212,
+        "AllocatedBytesPerQuery": 83.36533333333334,
+        "AllocationsPerQuery": 3.573969696969697,
+        "CandidateAmplification": 1
+      }
+    },
+    {
+      "Name": "packed-rtree32",
+      "FileBytes": 32889682,
+      "ResidentArrayBytes": 32889618,
+      "BuildSeconds": 0.2436471,
+      "OpenSeconds": 0.0476639,
+      "Query": {
+        "MedianUS": 2.2,
+        "P95US": 3.8,
+        "P99US": 5.6,
+        "MaxUS": 179.5,
+        "MeanUS": 2.0178969696969697,
+        "AllocatedBytesPerQuery": 83.36484848484848,
+        "AllocationsPerQuery": 3.573909090909091,
+        "CandidateAmplification": 1
+      }
+    },
+    {
+      "Name": "packed-rtree16-q8",
+      "FileBytes": 16011274,
+      "ResidentArrayBytes": 16011210,
+      "BuildSeconds": 0.0881582,
+      "OpenSeconds": 0.0230225,
+      "Query": {
+        "MedianUS": 2.7,
+        "P95US": 4.8,
+        "P99US": 6.5,
+        "MaxUS": 126.6,
+        "MeanUS": 2.484357575757576,
+        "AllocatedBytesPerQuery": 81.86836363636364,
+        "AllocationsPerQuery": 3.3135454545454546,
+        "CandidateAmplification": 1.0301853418441898
+      }
+    },
+    {
+      "Name": "packed-rtree16-q16",
+      "FileBytes": 22053202,
+      "ResidentArrayBytes": 22053138,
+      "BuildSeconds": 0.0923276,
+      "OpenSeconds": 0.0339834,
+      "Query": {
+        "MedianUS": 3.6,
+        "P95US": 6.2,
+        "P99US": 8.1,
+        "MaxUS": 129.3,
+        "MeanUS": 3.2572090909090905,
+        "AllocatedBytesPerQuery": 80.84218181818181,
+        "AllocationsPerQuery": 3.308181818181818,
+        "CandidateAmplification": 1.0000769053295393
+      }
+    },
+    {
+      "Name": "uniform-grid-0.01",
+      "FileBytes": 49633294,
+      "ResidentArrayBytes": 56313108,
+      "BuildSeconds": 0.1843236,
+      "Query": {
+        "MedianUS": 0.8,
+        "P95US": 1.5,
+        "P99US": 2.3,
+        "MaxUS": 46.7,
+        "MeanUS": 0.7769878787878788,
+        "AllocatedBytesPerQuery": 83.47345454545454,
+        "AllocationsPerQuery": 3.5784545454545453,
+        "CandidateAmplification": 1
+      }
+    },
+    {
+      "Name": "uniform-grid-0.02",
+      "FileBytes": 42359418,
+      "ResidentArrayBytes": 49039232,
+      "BuildSeconds": 0.1011118,
+      "Query": {
+        "MedianUS": 1.1,
+        "P95US": 2.2,
+        "P99US": 3.2,
+        "MaxUS": 197.9,
+        "MeanUS": 1.0764606060606061,
+        "AllocatedBytesPerQuery": 83.47345454545454,
+        "AllocationsPerQuery": 3.5784545454545453,
+        "CandidateAmplification": 1
+      }
+    },
+    {
+      "Name": "uniform-grid-0.05",
+      "FileBytes": 39279638,
+      "ResidentArrayBytes": 45959452,
+      "BuildSeconds": 0.098663,
+      "Query": {
+        "MedianUS": 2.4,
+        "P95US": 5.4,
+        "P99US": 7.9,
+        "MaxUS": 173.5,
+        "MeanUS": 2.385830303030303,
+        "AllocatedBytesPerQuery": 83.47393939393939,
+        "AllocationsPerQuery": 3.5784545454545453,
+        "CandidateAmplification": 1
+      }
+    }
+  ]
+}
