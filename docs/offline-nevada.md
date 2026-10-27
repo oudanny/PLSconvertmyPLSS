@@ -100,6 +100,36 @@ A spatial index avoids scanning every Nevada polygon on each point lookup. Downl
 
 For a useful measurement, record the pack's metadata and file size, machine and Go version. Measure full download/build time separately from lookup time. For lookup timing, use a mix of urban and rural points, boundaries, holes and uncovered points; compare the first lookup after opening a pack with repeated lookups in a reused process. Report how many points were tested and their result counts. Timing a new CLI process for every point also includes process startup, database opening and output formatting; a library benchmark with one open `Pack` measures a different workload.
 
+## Measured Nevada build
+
+The October 27, 2026 build created at `2026-10-27T18:41:01Z` was verified on Windows amd64 with Go 1.27.3 and an Intel Core i7-1195G7 CPU. These are measurements of this snapshot and machine, not guarantees for other data or hardware.
+
+| Measurement | Result |
+| --- | ---: |
+| Usable polygons | 1,510,482 |
+| Source records without geometry, retained for audit | 1 |
+| File size | 1,341,652,992 bytes (about 1.25 GiB) |
+| Successful download plus index build, four workers | 156.4 seconds |
+| Warm library point lookup, rotating through ten locations | 222,957 ns/op (about 0.223 ms) |
+| Allocations per lookup | 82,026 bytes; 289 allocations |
+
+The benchmark used one open pack and 15,628 lookups after warming its ten locations. It includes indexed candidate selection, feature decoding and polygon containment. It excludes process startup, network requests and output formatting. Live checks compared point-query and exact-ID match sets at Reno, Las Vegas, Carson City, Elko, Ely, Winnemucca, Tonopah, Pahrump, Fallon and Boulder City. Overlapping source matches were retained.
+
+This particular file's SHA-256 is `241646c9eebbfcc52d46b33c4c8ad7882cc5a5ab45fed58f8b832ac6246ffff3`. Rebuilding can produce a different hash because source records, download time and concurrent insertion order can change.
+
+Reproduce the opt-in checks from PowerShell after building a pack:
+
+```powershell
+$env:PLSS_NEVADA_PACK = (Resolve-Path data/nevada.sqlite).Path
+$env:PLSS_LIVE_VERIFY = '1'
+go test ./plss -run '^TestNevadaLiveParity$' -count=1 -v
+Remove-Item Env:PLSS_LIVE_VERIFY
+go test ./plss -run '^$' -bench '^BenchmarkNevadaLookup$' -benchtime=3s -count=1
+Remove-Item Env:PLSS_NEVADA_PACK
+```
+
+Ordinary test runs skip these real-pack checks. The live comparison explicitly requires a network connection; the benchmark uses only the local file.
+
 ## Go library
 
 `plss.Pack` and `plss.Client` both implement `plss.Provider`. Keep a pack open for repeated local queries and close it afterward:

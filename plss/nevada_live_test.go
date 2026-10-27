@@ -2,6 +2,7 @@ package plss_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -33,7 +34,8 @@ var nevadaPoints = []struct {
 func matchKeys(matches []plss.Match) []string {
 	keys := make([]string, len(matches))
 	for i, m := range matches {
-		keys[i] = m.Layer + ":" + m.ID() + ":" + m.Attribute("OBJECTID")
+		objectID, _ := json.Marshal(m.Attributes["OBJECTID"])
+		keys[i] = m.Layer + ":" + m.ID() + ":" + string(objectID)
 	}
 	sort.Strings(keys)
 	return keys
