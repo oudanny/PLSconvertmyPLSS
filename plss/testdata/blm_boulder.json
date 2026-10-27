@@ -1,0 +1,86 @@
+{
+  "features": [
+    {
+      "attributes": {
+        "OBJECTID": 12966338,
+        "STATEABBR": "CO",
+        "PRINMERCD": "06",
+        "PRINMER": "6th Meridian",
+        "TWNSHPNO": "001",
+        "TWNSHPFRAC": "0",
+        "TWNSHPDIR": "N",
+        "RANGENO": "070",
+        "RANGEFRAC": "0",
+        "RANGEDIR": "W",
+        "TWNSHPDPCD": "0",
+        "PLSSID": "CO060010N0700W0",
+        "STEWARD": "BLM Cadastral - CO",
+        "TWNSHPLAB": "1N 70W",
+        "FRSTDIVID": "CO060010N0700W0SN300",
+        "FRSTDIVTYP": "SN",
+        "FRSTDIVTXT": "Section",
+        "FRSTDIVNO": "30",
+        "FRSTDIVDUP": "0",
+        "FRSTDIVLAB": "30",
+        "SECDIVID": "CO060010N0700W0SN300ASWSE",
+        "SECDIVTYP": "A",
+        "SECDIVNO": "SWSE",
+        "SECDIVSUF": null,
+        "SECDIVNOTE": null,
+        "SECDIVLAB": "SWSE",
+        "SURVTYP": null,
+        "SURVNO": null,
+        "SURVSUF": null,
+        "SURVNOTE": null,
+        "SURVLAB": null,
+        "QSEC": null,
+        "QQSEC": null,
+        "GOVLOT": null,
+        "SECDIVTXT": "Aliquot Part",
+        "SURVID": null,
+        "SURVTYPTXT": null,
+        "SRVNAME": null,
+        "SURVDIV": null,
+        "SOURCEREF": null,
+        "SOURCEDATE": null,
+        "RECRDAREATX": "40 Acres",
+        "RECRDAREANO": 40.0,
+        "GISACRE": 40.53538961,
+        "REVISEDDATE": null,
+        "SHAPE.STArea()": 280003.1337900047,
+        "SHAPE.STLength()": 2116.622296681854
+      },
+      "geometry": {
+        "rings": [
+          [
+            [
+              -105.2678312620085,
+              40.01460663022392
+            ],
+            [
+              -105.27257000409466,
+              40.01458073188956
+            ],
+            [
+              -105.27259312757965,
+              40.01823550538245
+            ],
+            [
+              -105.26785005244965,
+              40.018251930702064
+            ],
+            [
+              -105.2678312620085,
+              40.01460663022392
+            ]
+          ]
+        ]
+      }
+    }
+  ],
+  "spatialReference": {
+    "wkid": 4326,
+    "latestWkid": 4326
+  },
+  "exceededTransferLimit": null
+}

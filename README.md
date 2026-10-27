@@ -1,0 +1,152 @@
+# PLSconvertmyPLSS
+
+A Go command-line app and reusable library for converting latitude/longitude and UTM coordinates, and finding the corresponding Public Land Survey System (PLSS) land descriptions through public BLM data.
+
+- Latitude/longitude: decimal degrees (DD), degrees and decimal minutes (DDM), and degrees/minutes/seconds (DMS).
+- UTM: WGS 84, northern and southern hemispheres, with Norway and Svalbard zone exceptions.
+- PLSS: township/range/section, available aliquot subdivisions and government lots, or exact BLM identifiers.
+- Plain-text or JSON output, with optional polygon geometry.
+- Coordinate conversions run offline. PLSS queries use BLM's public REST service; no API key or local dataset is required.
+
+PLSS describes an **area**, so converting PLSS to latitude/longitude returns a representative point inside a published polygon. It is not a surveyed corner or a unique coordinate for the land description. Coordinate-to-PLSS results depend on published coverage and may include multiple matches on boundaries.
+
+## Install
+
+Requires Go 1.24 or newer. There are no third-party Go dependencies.
+
+```sh
+go install github.com/oudanny/PLSconvertmyPLSS/cmd/plssconvert@latest
+```
+
+Or run from source:
+
+```sh
+git clone https://github.com/oudanny/PLSconvertmyPLSS.git
+cd PLSconvertmyPLSS
+go run ./cmd/plssconvert --help
+```
+
+After installation, ensure your Go binary directory (`go env GOPATH`, then `bin`) is on `PATH`. Windows builds produce `plssconvert.exe`.
+
+## Use
+
+Convert latitude/longitude to DD, DDM, DMS, compact ISO 6709 and UTM:
+
+```sh
+plssconvert latlon --value '40.015,-105.2705'
+plssconvert latlon --lat '40°0′54″N' --lon '105°16′13.8″W'
+```
+
+Add a live PLSS lookup:
+
+```sh
+plssconvert latlon --value '40.015,-105.2705' --plss --json
+```
+
+Convert a UTM coordinate, optionally looking up PLSS:
+
+```sh
+plssconvert utm --value '13N 476915.239 4429457.113'
+plssconvert utm --zone 13 --hemisphere N --easting 476915.239 --northing 4429457.113 --plss
+```
+
+Find a section or a published aliquot subdivision:
+
+```sh
+plssconvert plss --state CO --meridian 06 --township 1N --range 70W --section 30
+plssconvert plss --state CO --meridian 06 --township 1N --range 70W --section 30 --aliquot SWSE --json --geometry
+```
+
+The principal meridian is required because township and range repeat across meridians. `06` is the Sixth Principal Meridian. Supply `--lot` instead of `--aliquot` for a government lot. Availability of these subdivisions varies by location.
+
+Use a BLM identifier to select a specific published feature:
+
+```sh
+plssconvert plss --layer division --id CO060010N0700W0SN300ASWSE --json --geometry
+```
+
+For exact IDs, `--layer` accepts `township` (`PLSSID`), `section` (`FRSTDIVID`), `division` / `intersected` (`SECDIVID`), or `survey` (`SURVID`). Omit `--section` in a structured query to request a township. `--township-fraction` and `--range-fraction` accept the source's one-digit BLM fraction codes, defaulting to `0`.
+
+Run `plssconvert <command> --help` for all flags. Place flags after the command. Quote coordinate strings containing spaces or symbols. `--json` produces machine-readable output; `--geometry` includes rings with coordinates ordered **longitude, latitude** and requires `--json`. `--timeout` controls the online request deadline, and `--service-url` can point to a compatible ArcGIS service.
+
+## Coordinate conventions
+
+Latitude comes before longitude in coordinate pairs. Geographic coordinates use WGS 84; latitude is between −90° and +90°, and longitude between −180° and +180°. UTM applies between 80°S and 84°N. Points outside that band can still be displayed as latitude/longitude.
+
+Accepted latitude/longitude input includes:
+
+| Form | Example |
+| --- | --- |
+| Signed decimal degrees | `37.7749,-122.4194` |
+| Hemisphere prefix or suffix | `N37.7749,W122.4194` |
+| Degrees and decimal minutes | `37°46.494′N,122°25.164′W` |
+| Degrees, minutes and seconds | `37°46′29.64″N,122°25′9.84″W` |
+| Colon-separated DMS | `37:46:29.64N,122:25:9.84W` |
+| Words | `37 degrees 46 minutes 29.64 seconds north,122 degrees 25 minutes 9.84 seconds west` |
+| Compact DDM / DMS | `3746.494N,12225.164W` / `374629.64N,1222509.84W` |
+| Compact signed ISO 6709 | `+37.7749-122.4194/`, `+3746.494-12225.164/`, `+374629.64-1222509.84/` |
+
+ASCII quotes, whitespace and lowercase hemisphere letters also work. A comma or semicolon separates a pair; whitespace is accepted when the split is unambiguous. Conflicting signs/hemispheres and out-of-range minutes or seconds are rejected. Compact ISO 6709 supports DD, DDM and DMS without altitude or CRS suffixes; the trailing slash is optional.
+
+In UTM text, `13N` and `13S` mean **hemispheres**. For a latitude band, use an explicit form such as `13 band T 476915.239 4429457.113` or the `--band T` flag. JSON output reports the hemisphere and latitude band separately. This distinction matters because band `S` is north of the equator. MGRS, UPS, altitude and arbitrary datum conversion are outside the current scope.
+
+## Go libraries
+
+`coord` contains coordinate parsing, formatting and WGS 84 / UTM conversion. `plss` contains the HTTP client and polygon lookup logic. Both can be imported independently of the CLI:
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    "github.com/oudanny/PLSconvertmyPLSS/coord"
+)
+
+func main() {
+    point, err := coord.ParsePair("40.015,-105.2705")
+    if err != nil {
+        log.Fatal(err)
+    }
+    utm, err := coord.ToUTM(point)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(coord.FormatDMS(point))
+    fmt.Println(utm.String())
+}
+```
+
+The formatters are `FormatDD`, `FormatDDM`, `FormatDMS` and `FormatISO6709`. To query PLSS from a library, pass a context with a deadline:
+
+```go
+client := plss.NewClient()
+ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+defer cancel()
+matches, err := client.Lookup(ctx, 40.015, -105.2705)
+if err != nil {
+    return err
+}
+for _, match := range matches {
+    fmt.Println(match.ID(), match.Label, match.Representative)
+}
+```
+
+The snippet belongs inside a function returning `error` and uses imports `context`, `fmt`, `time`, and `github.com/oudanny/PLSconvertmyPLSS/plss`. `Find(ctx, plss.Description{...})` accepts a structured description; `FindID(ctx, "division", id)` accepts an exact identifier. Each match retains the original BLM attributes and polygon, the representative point, the source service and the resolution layer. `Lookup` tries intersected polygons, then sections, then townships, and reports the layer it found. Preserve all returned matches.
+
+## Data source and accuracy
+
+PLSS data comes from the [BLM National PLSS Public Land Survey System Polygons dataset](https://gbp-blm-egis.hub.arcgis.com/datasets/283939812bc34c11bad695a1c8152faf/about). BLM identifies these data as public domain and requests attribution. Its published GIS data have varying accuracy and completeness and are not legal land surveys. See [data sources and limitations](docs/data-sources.md) for the service URL, provenance, available layers and download information.
+
+This project uses BLM data but is not affiliated with or endorsed by BLM. It does not reconstruct missing aliquots by dividing an idealized square or infer legal ownership from PLSS boundaries.
+
+## Development
+
+```sh
+go test ./...
+go vet ./...
+go build ./cmd/plssconvert
+```
+
+Unit tests use local HTTP fixtures for PLSS, so normal test runs do not depend on the live BLM service. GitHub Actions runs tests, vet and builds on Linux, Windows and macOS.
