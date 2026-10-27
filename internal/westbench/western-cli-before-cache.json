@@ -1,0 +1,873 @@
+{
+  "atlas": "data/western-us.atlas",
+  "atlas_bytes": 741964969,
+  "executable": "bin/plssatlas.exe",
+  "executable_bytes": 9061888,
+  "measured_at_utc": "2026-10-27T23:23:19.3437472Z",
+  "runs": [
+    {
+      "round": 1,
+      "state": "AZ",
+      "city": "Phoenix",
+      "latitude": 33.4484,
+      "longitude": -112.074,
+      "elapsed_ms": 53.9077,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 368621,
+          "layer": "intersected",
+          "id": "AZ140010N0030E0SN080ANENW",
+          "state": "AZ"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "CA",
+      "city": "Los Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "elapsed_ms": 52.2328,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 841334,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN110L37",
+          "state": "CA"
+        },
+        {
+          "feature_id": 1328381,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN000",
+          "state": "CA"
+        },
+        {
+          "feature_id": 2143539,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN110",
+          "state": "CA"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "CO",
+      "city": "Boulder",
+      "latitude": 40.015,
+      "longitude": -105.2705,
+      "elapsed_ms": 50.2536,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 464427,
+          "layer": "intersected",
+          "id": "CO060010N0700W0SN300ASWSE",
+          "state": "CO"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "ID",
+      "city": "Boise",
+      "latitude": 43.615,
+      "longitude": -116.2023,
+      "elapsed_ms": 58.0362,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 92622,
+          "layer": "intersected",
+          "id": "ID080030N0020E0SN100",
+          "state": "ID"
+        },
+        {
+          "feature_id": 1243826,
+          "layer": "intersected",
+          "id": "ID080030N0020E0SN030N19",
+          "state": "ID"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "MT",
+      "city": "Billings",
+      "latitude": 45.7833,
+      "longitude": -108.5007,
+      "elapsed_ms": 53.3453,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 2045634,
+          "layer": "intersected",
+          "id": "MT200010S0260E0SN030L2",
+          "state": "MT"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "NM",
+      "city": "Albuquerque",
+      "latitude": 35.0844,
+      "longitude": -106.6504,
+      "elapsed_ms": 52.2376,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1834484,
+          "layer": "intersected",
+          "id": "NM230100N0030E0SN200",
+          "state": "NM"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "NV",
+      "city": "Reno",
+      "latitude": 39.5296,
+      "longitude": -119.8138,
+      "elapsed_ms": 62.6313,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1227625,
+          "layer": "intersected",
+          "id": "NV210190N0190E0SN110ASWNE",
+          "state": "NV"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "OR",
+      "city": "Portland",
+      "latitude": 45.5152,
+      "longitude": -122.6784,
+      "elapsed_ms": 53.9254,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1136845,
+          "layer": "intersected",
+          "id": "OR330010S0010E0SN030",
+          "state": "OR"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "UT",
+      "city": "Salt Lake City",
+      "latitude": 40.7608,
+      "longitude": -111.891,
+      "elapsed_ms": 55.7258,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 292659,
+          "layer": "intersected",
+          "id": "UT260010S0010E0SN060L6",
+          "state": "UT"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "WA",
+      "city": "Seattle",
+      "latitude": 47.6062,
+      "longitude": -122.3321,
+      "elapsed_ms": 47.5449,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 126841,
+          "layer": "intersected",
+          "id": "WA330250N0040E0SN320",
+          "state": "WA"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "state": "WY",
+      "city": "Cheyenne",
+      "latitude": 41.14,
+      "longitude": -104.8202,
+      "elapsed_ms": 48.4586,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1206565,
+          "layer": "intersected",
+          "id": "WY060140N0660W0SN310ASENW",
+          "state": "WY"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "MT",
+      "city": "Billings",
+      "latitude": 45.7833,
+      "longitude": -108.5007,
+      "elapsed_ms": 51.705,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 2045634,
+          "layer": "intersected",
+          "id": "MT200010S0260E0SN030L2",
+          "state": "MT"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "NM",
+      "city": "Albuquerque",
+      "latitude": 35.0844,
+      "longitude": -106.6504,
+      "elapsed_ms": 47.7247,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1834484,
+          "layer": "intersected",
+          "id": "NM230100N0030E0SN200",
+          "state": "NM"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "NV",
+      "city": "Reno",
+      "latitude": 39.5296,
+      "longitude": -119.8138,
+      "elapsed_ms": 58.4204,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1227625,
+          "layer": "intersected",
+          "id": "NV210190N0190E0SN110ASWNE",
+          "state": "NV"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "OR",
+      "city": "Portland",
+      "latitude": 45.5152,
+      "longitude": -122.6784,
+      "elapsed_ms": 51.5742,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1136845,
+          "layer": "intersected",
+          "id": "OR330010S0010E0SN030",
+          "state": "OR"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "UT",
+      "city": "Salt Lake City",
+      "latitude": 40.7608,
+      "longitude": -111.891,
+      "elapsed_ms": 47.1915,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 292659,
+          "layer": "intersected",
+          "id": "UT260010S0010E0SN060L6",
+          "state": "UT"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "WA",
+      "city": "Seattle",
+      "latitude": 47.6062,
+      "longitude": -122.3321,
+      "elapsed_ms": 47.0954,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 126841,
+          "layer": "intersected",
+          "id": "WA330250N0040E0SN320",
+          "state": "WA"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "WY",
+      "city": "Cheyenne",
+      "latitude": 41.14,
+      "longitude": -104.8202,
+      "elapsed_ms": 53.3588,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1206565,
+          "layer": "intersected",
+          "id": "WY060140N0660W0SN310ASENW",
+          "state": "WY"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "AZ",
+      "city": "Phoenix",
+      "latitude": 33.4484,
+      "longitude": -112.074,
+      "elapsed_ms": 47.9295,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 368621,
+          "layer": "intersected",
+          "id": "AZ140010N0030E0SN080ANENW",
+          "state": "AZ"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "CA",
+      "city": "Los Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "elapsed_ms": 49.8491,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 841334,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN110L37",
+          "state": "CA"
+        },
+        {
+          "feature_id": 1328381,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN000",
+          "state": "CA"
+        },
+        {
+          "feature_id": 2143539,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN110",
+          "state": "CA"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "CO",
+      "city": "Boulder",
+      "latitude": 40.015,
+      "longitude": -105.2705,
+      "elapsed_ms": 50.1928,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 464427,
+          "layer": "intersected",
+          "id": "CO060010N0700W0SN300ASWSE",
+          "state": "CO"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "state": "ID",
+      "city": "Boise",
+      "latitude": 43.615,
+      "longitude": -116.2023,
+      "elapsed_ms": 47.4478,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 92622,
+          "layer": "intersected",
+          "id": "ID080030N0020E0SN100",
+          "state": "ID"
+        },
+        {
+          "feature_id": 1243826,
+          "layer": "intersected",
+          "id": "ID080030N0020E0SN030N19",
+          "state": "ID"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "UT",
+      "city": "Salt Lake City",
+      "latitude": 40.7608,
+      "longitude": -111.891,
+      "elapsed_ms": 48.9987,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 292659,
+          "layer": "intersected",
+          "id": "UT260010S0010E0SN060L6",
+          "state": "UT"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "WA",
+      "city": "Seattle",
+      "latitude": 47.6062,
+      "longitude": -122.3321,
+      "elapsed_ms": 44.352,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 126841,
+          "layer": "intersected",
+          "id": "WA330250N0040E0SN320",
+          "state": "WA"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "WY",
+      "city": "Cheyenne",
+      "latitude": 41.14,
+      "longitude": -104.8202,
+      "elapsed_ms": 46.5665,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1206565,
+          "layer": "intersected",
+          "id": "WY060140N0660W0SN310ASENW",
+          "state": "WY"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "AZ",
+      "city": "Phoenix",
+      "latitude": 33.4484,
+      "longitude": -112.074,
+      "elapsed_ms": 50.5275,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 368621,
+          "layer": "intersected",
+          "id": "AZ140010N0030E0SN080ANENW",
+          "state": "AZ"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "CA",
+      "city": "Los Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "elapsed_ms": 52.4439,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 841334,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN110L37",
+          "state": "CA"
+        },
+        {
+          "feature_id": 1328381,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN000",
+          "state": "CA"
+        },
+        {
+          "feature_id": 2143539,
+          "layer": "intersected",
+          "id": "CA270010S0130W0SN110",
+          "state": "CA"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "CO",
+      "city": "Boulder",
+      "latitude": 40.015,
+      "longitude": -105.2705,
+      "elapsed_ms": 51.584,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 464427,
+          "layer": "intersected",
+          "id": "CO060010N0700W0SN300ASWSE",
+          "state": "CO"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "ID",
+      "city": "Boise",
+      "latitude": 43.615,
+      "longitude": -116.2023,
+      "elapsed_ms": 52.2843,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 92622,
+          "layer": "intersected",
+          "id": "ID080030N0020E0SN100",
+          "state": "ID"
+        },
+        {
+          "feature_id": 1243826,
+          "layer": "intersected",
+          "id": "ID080030N0020E0SN030N19",
+          "state": "ID"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "MT",
+      "city": "Billings",
+      "latitude": 45.7833,
+      "longitude": -108.5007,
+      "elapsed_ms": 55.4984,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 2045634,
+          "layer": "intersected",
+          "id": "MT200010S0260E0SN030L2",
+          "state": "MT"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "NM",
+      "city": "Albuquerque",
+      "latitude": 35.0844,
+      "longitude": -106.6504,
+      "elapsed_ms": 49.8521,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1834484,
+          "layer": "intersected",
+          "id": "NM230100N0030E0SN200",
+          "state": "NM"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "NV",
+      "city": "Reno",
+      "latitude": 39.5296,
+      "longitude": -119.8138,
+      "elapsed_ms": 55.7564,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1227625,
+          "layer": "intersected",
+          "id": "NV210190N0190E0SN110ASWNE",
+          "state": "NV"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "state": "OR",
+      "city": "Portland",
+      "latitude": 45.5152,
+      "longitude": -122.6784,
+      "elapsed_ms": 49.0059,
+      "exit_code": 0,
+      "status": "matched",
+      "stdout_validated": true,
+      "matches": [
+        {
+          "feature_id": 1136845,
+          "layer": "intersected",
+          "id": "OR330010S0010E0SN030",
+          "state": "OR"
+        }
+      ],
+      "stderr": ""
+    }
+  ],
+  "n": 33,
+  "median_ms": 51.5742,
+  "p95_ms": 58.4204,
+  "by_state": [
+    {
+      "state": "AZ",
+      "city": "Phoenix",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 50.5275,
+      "p95_ms": 53.9077
+    },
+    {
+      "state": "CA",
+      "city": "Los Angeles",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 52.2328,
+      "p95_ms": 52.4439
+    },
+    {
+      "state": "CO",
+      "city": "Boulder",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 50.2536,
+      "p95_ms": 51.584
+    },
+    {
+      "state": "ID",
+      "city": "Boise",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 52.2843,
+      "p95_ms": 58.0362
+    },
+    {
+      "state": "MT",
+      "city": "Billings",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 53.3453,
+      "p95_ms": 55.4984
+    },
+    {
+      "state": "NM",
+      "city": "Albuquerque",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 49.8521,
+      "p95_ms": 52.2376
+    },
+    {
+      "state": "NV",
+      "city": "Reno",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 58.4204,
+      "p95_ms": 62.6313
+    },
+    {
+      "state": "OR",
+      "city": "Portland",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 51.5742,
+      "p95_ms": 53.9254
+    },
+    {
+      "state": "UT",
+      "city": "Salt Lake City",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 48.9987,
+      "p95_ms": 55.7258
+    },
+    {
+      "state": "WA",
+      "city": "Seattle",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 47.0954,
+      "p95_ms": 47.5449
+    },
+    {
+      "state": "WY",
+      "city": "Cheyenne",
+      "n": 3,
+      "status": [
+        "matched"
+      ],
+      "median_ms": 48.4586,
+      "p95_ms": 53.3588
+    }
+  ],
+  "matched_runs": 33,
+  "coverage_gap_runs": 0,
+  "error_runs": 0,
+  "representative_reverse": {
+    "id": "NV210190N0190E0SN110ASWNE",
+    "layer": "intersected",
+    "source_feature_id": 1227625,
+    "representative": {
+      "latitude": 39.52903379032697,
+      "longitude": -119.81479999664111,
+      "datum": "WGS84",
+      "dd": "39.52903379, -119.81480000",
+      "ddm": "39°31.742027′N, 119°48.888000′W",
+      "dms": "39°31′44.5216″N, 119°48′53.2800″W",
+      "iso6709": "+39.52903379-119.81480000/",
+      "utm": {
+        "zone": 11,
+        "hemisphere": "N",
+        "easting": 258068.31953659438,
+        "northing": 4379270.762470268,
+        "band": "S"
+      }
+    },
+    "forward_source_feature_preserved": true,
+    "reverse_process_ms": 83.6429,
+    "forward_process_ms": 58.3385
+  },
+  "utm_roundtrip": {
+    "input": "11N 258156.24856222895 4379330.926020395",
+    "latitude_error_degrees": 7.105427357601002E-15,
+    "longitude_error_degrees": 0.0,
+    "source_feature_ids_preserved": true,
+    "process_ms": 57.5264
+  },
+  "note": "Fresh process for every command. Stopwatch covers Process.Start through process exit and stdout/stderr drain; JSON validation follows outside the timed interval. Three rotated passes over eleven city test coordinates; roundtrip commands are excluded from the33 latency samples. Median/p95 use nearest rank. OS cache is uncontrolled and likely warm after building/verifying the atlas. Clean repeat after build processes finished; no go, plssbuild, plssdownload, or westbench process was observed immediately before sampling. Other desktop activity remains uncontrolled."
+}

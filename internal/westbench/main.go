@@ -47,31 +47,55 @@ type latency struct {
 }
 
 func measure(n int, fn func(int) error) (latency, error) {
+	return measureWithSetup(n, func() (func(int) error, func() error, error) { return fn, func() error { return nil }, nil })
+}
+
+// Each pass gets its own setup/cleanup. Callers can initialize indexes without
+// carrying prepared polygons from timing into the allocation measurements.
+func measureWithSetup(n int, setup func() (func(int) error, func() error, error)) (latency, error) {
 	if n <= 0 {
 		return latency{}, errors.New("measurement requires queries")
 	}
-	runtime.GC()
+	pass := func(body func(func(int) error) error) error {
+		fn, cleanup, err := setup()
+		if err != nil {
+			return err
+		}
+		runErr := body(fn)
+		return errors.Join(runErr, cleanup())
+	}
 	times := make([]int64, n)
 	var elapsed int64
-	for i := 0; i < n; i++ {
-		t := preciseNow()
-		if err := fn(i); err != nil {
-			return latency{}, err
+	if err := pass(func(fn func(int) error) error {
+		runtime.GC()
+		for i := 0; i < n; i++ {
+			t := preciseNow()
+			if err := fn(i); err != nil {
+				return err
+			}
+			times[i] = preciseNow() - t
+			elapsed += times[i]
 		}
-		times[i] = preciseNow() - t
-		elapsed += times[i]
+		return nil
+	}); err != nil {
+		return latency{}, err
 	}
 	// Allocation accounting is a separate untimed pass: timers, sample storage,
 	// and percentile sorting are benchmark machinery, not query allocations.
-	runtime.GC()
 	var before, after runtime.MemStats
-	runtime.ReadMemStats(&before)
-	for i := 0; i < n; i++ {
-		if err := fn(i); err != nil {
-			return latency{}, err
+	if err := pass(func(fn func(int) error) error {
+		runtime.GC()
+		runtime.ReadMemStats(&before)
+		for i := 0; i < n; i++ {
+			if err := fn(i); err != nil {
+				return err
+			}
 		}
+		runtime.ReadMemStats(&after)
+		return nil
+	}); err != nil {
+		return latency{}, err
 	}
-	runtime.ReadMemStats(&after)
 	sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
 	return latency{n, float64(elapsed) / float64(n) / 1000, float64(times[(n*50+99)/100-1]) / 1000, float64(times[(n*95+99)/100-1]) / 1000, float64(times[(n*99+99)/100-1]) / 1000, float64(after.TotalAlloc-before.TotalAlloc) / float64(n), float64(after.Mallocs-before.Mallocs) / float64(n)}, nil
 }
@@ -315,6 +339,28 @@ func run() error {
 			}
 		}
 	}
+	// These are the same independently verified points, but prepared geometry
+	// from validation must not turn the first-pass metric into a repeated test.
+	// Verify loads state indexes and touches component pages, never preparing
+	// a polygon. A separate verified reader is used for each measured pass.
+	firstSpread, err := measureWithSetup(len(points), func() (func(int) error, func() error, error) {
+		fresh, err := regionatlas.OpenWithOptions(*data, regionatlas.Options{MaxOpenShards: *cap})
+		if err != nil {
+			return nil, nil, err
+		}
+		if err := fresh.Verify(); err != nil {
+			fresh.Close()
+			return nil, nil, err
+		}
+		return func(i int) error {
+			p := points[i]
+			_, err := fresh.Lookup(ctx, p.Latitude, p.Longitude)
+			return harmless(err)
+		}, fresh.Close, nil
+	})
+	if err != nil {
+		return err
+	}
 	warm, err := measure(len(points), func(i int) error { p := points[i]; _, e := a.Lookup(ctx, p.Latitude, p.Longitude); return harmless(e) })
 	if err != nil {
 		return err
@@ -361,7 +407,7 @@ func run() error {
 	}
 	e := json.NewEncoder(os.Stdout)
 	e.SetIndent("", "  ")
-	return e.Encode(map[string]any{"file_bytes": info.Size(), "go_version": runtime.Version(), "states": a.Sources(), "open_us": openUS, "open_go_heap_delta_bytes": openHeap, "first_query_us_by_state": first, "state_readers_open": a.OpenShards(), "query_checks": len(checks), "queries_with_hits": hits, "reverse_id_checks": reverseChecked, "spread_mixed_state": warm, "repeated_state_representatives": hot, "note": "Persistent-open mapped queries after verification warms OS pages. Oracle compares state/layer/source-row-ID/published-ID multisets using source SQLite candidates and polygons. Reverse samples include bounded explicit survey and unlocated records. Allocations are measured in a separate untimed pass. Each first-query measurement uses a fresh reader, excludes opening, and may initialize overlapping states; OS cache state is uncontrolled. Go heap excludes mapped resident pages. These sampled checks do not prove every possible query."})
+	return e.Encode(map[string]any{"file_bytes": info.Size(), "go_version": runtime.Version(), "states": a.Sources(), "open_us": openUS, "open_go_heap_delta_bytes": openHeap, "first_query_us_by_state": first, "state_readers_open": a.OpenShards(), "state_cache_cap": *cap, "query_checks": len(checks), "queries_with_hits": hits, "reverse_id_checks": reverseChecked, "first_pass_spread_mixed_state": firstSpread, "spread_mixed_state": warm, "repeated_spread_mixed_state": warm, "repeated_state_representatives": hot, "note": "Mapped queries use warm OS pages. first_pass_spread_mixed_state uses a fresh reader separately for timing and allocation passes; Verify initializes indexes and warms file pages without preparing polygons. Prepared/geometry caches begin empty and may fill naturally within each pass. With a state cap below the state count, index evictions/reloads remain part of the measured workload. spread_mixed_state is the compatibility alias for repeated_spread_mixed_state: that reader has already queried the validated points and may reuse prepared geometry. Setup, verification, timers and cleanup are excluded from allocations; timing includes per-query timer overhead. Oracle compares state/layer/source-row-ID/published-ID multisets using source SQLite candidates and polygons. Reverse samples include bounded explicit survey and unlocated records. Each first-query-by-state measurement uses a fresh reader, excludes opening, and may initialize overlapping states; its OS cache state is uncontrolled. Go heap excludes mapped resident pages. These sampled checks do not prove every possible query."})
 }
 func main() {
 	if err := run(); err != nil {

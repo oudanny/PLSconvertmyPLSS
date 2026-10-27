@@ -154,3 +154,35 @@ func TestMeasurementExcludesTimingAllocations(t *testing.T) {
 		t.Fatal("invalid percentile statistics")
 	}
 }
+
+func TestMeasurementSetsUpEachPassAndCleansUpFailures(t *testing.T) {
+	setups, cleanups := 0, 0
+	_, err := measureWithSetup(7, func() (func(int) error, func() error, error) {
+		setups++
+		next := 0
+		return func(i int) error {
+			if i != next {
+				return errors.New("reused pass state")
+			}
+			next++
+			return nil
+		}, func() error {
+			cleanups++
+			if next != 7 {
+				return errors.New("incomplete pass")
+			}
+			return nil
+		}, nil
+	})
+	if err != nil || setups != 2 || cleanups != 2 {
+		t.Fatalf("setup%d cleanup%d err%v", setups, cleanups, err)
+	}
+	want := errors.New("query failure")
+	cleanups = 0
+	_, err = measureWithSetup(7, func() (func(int) error, func() error, error) {
+		return func(int) error { return want }, func() error { cleanups++; return nil }, nil
+	})
+	if !errors.Is(err, want) || cleanups != 1 {
+		t.Fatalf("error cleanup%d: %v", cleanups, err)
+	}
+}

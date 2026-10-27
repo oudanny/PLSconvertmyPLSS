@@ -1,0 +1,618 @@
+{
+  "region_file": "western-us.atlas",
+  "region_bytes": 741964969,
+  "region_sha256": "564d057cfd079d86d0f58d7daeb70e38b145388cc333284980f42408d52f57d9",
+  "executable_windows_amd64_bytes": 9075200,
+  "source_total_bytes": 16056418304.0,
+  "polygon_records": 18026615.0,
+  "unlocated_records": 24.0,
+  "components": [
+    {
+      "state": "AZ",
+      "geometry_bytes": 37729044,
+      "index_bytes": 16349047,
+      "keys_bytes": 7904274
+    },
+    {
+      "state": "CA",
+      "geometry_bytes": 63897322,
+      "index_bytes": 24181987,
+      "keys_bytes": 16213832
+    },
+    {
+      "state": "CO",
+      "geometry_bytes": 54645131,
+      "index_bytes": 21917050,
+      "keys_bytes": 12301283
+    },
+    {
+      "state": "ID",
+      "geometry_bytes": 27222713,
+      "index_bytes": 13248187,
+      "keys_bytes": 6529705
+    },
+    {
+      "state": "MT",
+      "geometry_bytes": 60404004,
+      "index_bytes": 25707244,
+      "keys_bytes": 12885221
+    },
+    {
+      "state": "NM",
+      "geometry_bytes": 41450819,
+      "index_bytes": 19716295,
+      "keys_bytes": 9493477
+    },
+    {
+      "state": "NV",
+      "geometry_bytes": 34826095,
+      "index_bytes": 16011274,
+      "keys_bytes": 7781587
+    },
+    {
+      "state": "OR",
+      "geometry_bytes": 37693588,
+      "index_bytes": 16737967,
+      "keys_bytes": 10527381
+    },
+    {
+      "state": "UT",
+      "geometry_bytes": 30383821,
+      "index_bytes": 13944805,
+      "keys_bytes": 6839511
+    },
+    {
+      "state": "WA",
+      "geometry_bytes": 20878395,
+      "index_bytes": 6690043,
+      "keys_bytes": 4869229
+    },
+    {
+      "state": "WY",
+      "geometry_bytes": 37595548,
+      "index_bytes": 16579828,
+      "keys_bytes": 8022830
+    }
+  ],
+  "states": [
+    {
+      "state": "AZ",
+      "records": 1542351,
+      "unlocated": 0,
+      "source_bytes": 1356218368,
+      "atlas_bytes": 62047901,
+      "source_sha256": "a2cf12e33bcf1361cb4965be83e8947ff25884f0d606c159c3afc04a44bccc1c",
+      "decoded_geometry_sha256": "ca70a33a9aaac2d2be937603f1d7747bd1d6995988f2079c731904267736e0ec",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 28606800,
+        "vertex_directory_bytes": 111760,
+        "features": 1542351,
+        "unique_xy_vertices": 1787925,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 37729044,
+        "vertex_table_bytes": 20931774,
+        "compressed_record_block_bytes": 16492582,
+        "directory_bytes": 304560,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 1542351,
+      "identifiers_verified": 1542351,
+      "build_seconds": 60.0185374,
+      "source": {
+        "version": 1,
+        "state": "AZ",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T22:55:25Z",
+        "counts": {
+          "intersected": 1422750,
+          "section": 116188,
+          "township": 3413
+        },
+        "unlocated_counts": {
+          "intersected": 0,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "CA",
+      "records": 2281307,
+      "unlocated": 18,
+      "source_bytes": 2020540416,
+      "atlas_bytes": 104358677,
+      "source_sha256": "e6510f648dc1c7f2c9fb4bdc65ef923a86c34a43694cba9fc2981967e7013375",
+      "decoded_geometry_sha256": "6e45d396ba0ee86bb2bd00962aa3b06344699033a99250d69844dfcf296d0f47",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 39991984,
+        "vertex_directory_bytes": 156224,
+        "features": 2281307,
+        "unique_xy_vertices": 2499499,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 63897322,
+        "vertex_table_bytes": 31741800,
+        "compressed_record_block_bytes": 31714002,
+        "directory_bytes": 441392,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 2281307,
+      "identifiers_verified": 2281307,
+      "build_seconds": 125.2191276,
+      "source": {
+        "version": 1,
+        "state": "CA",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T23:00:34Z",
+        "counts": {
+          "intersected": 2134658,
+          "section": 141935,
+          "township": 4714
+        },
+        "unlocated_counts": {
+          "intersected": 18,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "CO",
+      "records": 2067634,
+      "unlocated": 0,
+      "source_bytes": 1800192000,
+      "atlas_bytes": 88929000,
+      "source_sha256": "465f4a63049056094f886bba5bccb483278759f8cfb344dbd18cd12b182fcde9",
+      "decoded_geometry_sha256": "4ad1826f94c1c3801e0c49413663837aba88b0d3c20934559dd935caa53d80a0",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 32916576,
+        "vertex_directory_bytes": 128592,
+        "features": 2067634,
+        "unique_xy_vertices": 2057286,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 54645131,
+        "vertex_table_bytes": 26111130,
+        "compressed_record_block_bytes": 28146817,
+        "directory_bytes": 387056,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 2067634,
+      "identifiers_verified": 2067634,
+      "build_seconds": 110.0148695,
+      "source": {
+        "version": 1,
+        "state": "CO",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T23:00:24Z",
+        "counts": {
+          "intersected": 1960493,
+          "section": 104083,
+          "township": 3058
+        },
+        "unlocated_counts": {
+          "intersected": 0,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "ID",
+      "records": 1249811,
+      "unlocated": 1,
+      "source_bytes": 1092108288,
+      "atlas_bytes": 47066141,
+      "source_sha256": "f745d1c7d470253d3253ccbac618749039b4d3931ddaa89f07eeba480228705e",
+      "decoded_geometry_sha256": "ee5c5867e7c7a5aabc24b0b92c47bac67d8bc2778fd9a7ad81d86c507cba2bc7",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 22171168,
+        "vertex_directory_bytes": 86608,
+        "features": 1249811,
+        "unique_xy_vertices": 1385698,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 27222713,
+        "vertex_table_bytes": 16170868,
+        "compressed_record_block_bytes": 10808869,
+        "directory_bytes": 242848,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 1249811,
+      "identifiers_verified": 1249811,
+      "build_seconds": 53.7960799,
+      "source": {
+        "version": 1,
+        "state": "ID",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T23:06:16Z",
+        "counts": {
+          "intersected": 1161437,
+          "section": 85877,
+          "township": 2497
+        },
+        "unlocated_counts": {
+          "intersected": 1,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "MT",
+      "records": 2425196,
+      "unlocated": 2,
+      "source_bytes": 2185920512,
+      "atlas_bytes": 99062005,
+      "source_sha256": "00fd574c8f8c43f0c3c273c9775e825e9f8503ecb2ba512aa0837fd5fa673df6",
+      "decoded_geometry_sha256": "90ca5287464bd359a37b4319ec25e43df252e10f854ab6461a0f72d87153c2e0",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 42359952,
+        "vertex_directory_bytes": 165472,
+        "features": 2425196,
+        "unique_xy_vertices": 2647497,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 60404004,
+        "vertex_table_bytes": 31727841,
+        "compressed_record_block_bytes": 28207411,
+        "directory_bytes": 468624,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 2425196,
+      "identifiers_verified": 2425196,
+      "build_seconds": 87.2310334,
+      "source": {
+        "version": 1,
+        "state": "MT",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T23:09:14Z",
+        "counts": {
+          "intersected": 2271829,
+          "section": 149176,
+          "township": 4191
+        },
+        "unlocated_counts": {
+          "intersected": 2,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "NM",
+      "records": 1860015,
+      "unlocated": 1,
+      "source_bytes": 1626619904,
+      "atlas_bytes": 70726127,
+      "source_sha256": "a549315b3335a98189e01ee742468c7668e7b0488c98549bc21cda0a617c1d21",
+      "decoded_geometry_sha256": "ea1e35a854aa53977eb1003eefa766b4abf824e249c7a561da0cae293e9e4828",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 30382992,
+        "vertex_directory_bytes": 118688,
+        "features": 1860015,
+        "unique_xy_vertices": 1898937,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 41450819,
+        "vertex_table_bytes": 22216215,
+        "compressed_record_block_bytes": 18883276,
+        "directory_bytes": 351200,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 1860015,
+      "identifiers_verified": 1860015,
+      "build_seconds": 49.6615989,
+      "source": {
+        "version": 1,
+        "state": "NM",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T23:15:31Z",
+        "counts": {
+          "intersected": 1746480,
+          "section": 110236,
+          "township": 3299
+        },
+        "unlocated_counts": {
+          "intersected": 0,
+          "section": 1,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "NV",
+      "records": 1510482,
+      "unlocated": 1,
+      "source_bytes": 1341652992,
+      "atlas_bytes": 58684492,
+      "source_sha256": "241646c9eebbfcc52d46b33c4c8ad7882cc5a5ab45fed58f8b832ac6246ffff3",
+      "decoded_geometry_sha256": "14323f87536d6da636577d043469fe5075852dcfb51a6297943e8ac51223b30e",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 25288896,
+        "vertex_directory_bytes": 98800,
+        "features": 1510482,
+        "unique_xy_vertices": 1580556,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 34826095,
+        "vertex_table_bytes": 18694719,
+        "compressed_record_block_bytes": 15843632,
+        "directory_bytes": 287616,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 1510482,
+      "identifiers_verified": 1510482,
+      "build_seconds": 57.8711096,
+      "source": {
+        "version": 1,
+        "state": "NV",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T18:41:01Z",
+        "counts": {
+          "intersected": 1394969,
+          "section": 112133,
+          "township": 3380
+        },
+        "unlocated_counts": {
+          "intersected": 1,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "OR",
+      "records": 1579039,
+      "unlocated": 1,
+      "source_bytes": 1503330304,
+      "atlas_bytes": 65024472,
+      "source_sha256": "994500208f318f2f8b95b9adf4117d9b396e3fd66cb583f6f76c2fade49e1796",
+      "decoded_geometry_sha256": "f532a895c49aabcef713165e33f32c8157c21cf6708d11c67d49cb6496ede1a5",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 31586224,
+        "vertex_directory_bytes": 123392,
+        "features": 1579039,
+        "unique_xy_vertices": 1974139,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 37693588,
+        "vertex_table_bytes": 22803205,
+        "compressed_record_block_bytes": 14569471,
+        "directory_bytes": 320784,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 1579039,
+      "identifiers_verified": 1579039,
+      "build_seconds": 78.2765001,
+      "source": {
+        "version": 1,
+        "state": "OR",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T22:57:05Z",
+        "counts": {
+          "intersected": 1472084,
+          "section": 104015,
+          "township": 2940
+        },
+        "unlocated_counts": {
+          "intersected": 1,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "UT",
+      "records": 1315533,
+      "unlocated": 0,
+      "source_bytes": 1149386752,
+      "atlas_bytes": 51233673,
+      "source_sha256": "7a05f81b3a7c61604c78da82c21cd3b3236c79fb172aefdf247d74906f8b0690",
+      "decoded_geometry_sha256": "27c12d32f4d522ee17370d62ab6f8609d86f12090d05151f8f78c6276985bf19",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 21902144,
+        "vertex_directory_bytes": 85568,
+        "features": 1315533,
+        "unique_xy_vertices": 1368884,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 30383821,
+        "vertex_table_bytes": 16265212,
+        "compressed_record_block_bytes": 13868465,
+        "directory_bytes": 250016,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 1315533,
+      "identifiers_verified": 1315533,
+      "build_seconds": 42.5546372,
+      "source": {
+        "version": 1,
+        "state": "UT",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T23:05:48Z",
+        "counts": {
+          "intersected": 1228213,
+          "section": 84754,
+          "township": 2566
+        },
+        "unlocated_counts": {
+          "intersected": 0,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "WA",
+      "records": 631123,
+      "unlocated": 0,
+      "source_bytes": 620920832,
+      "atlas_bytes": 32503203,
+      "source_sha256": "6b4e4a2bf8cb3a74e27bac6bedb094efa433ec130209ec17543efb79dfbc7022",
+      "decoded_geometry_sha256": "111eb5462e8f8e6cfd078d6ff2eedee9d45a18370a8df17abed23fe61f861ff1",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 19991184,
+        "vertex_directory_bytes": 78096,
+        "features": 631123,
+        "unique_xy_vertices": 1249449,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 20878395,
+        "vertex_table_bytes": 14337698,
+        "compressed_record_block_bytes": 6383577,
+        "directory_bytes": 156992,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 631123,
+      "identifiers_verified": 631123,
+      "build_seconds": 37.7270938,
+      "source": {
+        "version": 1,
+        "state": "WA",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T22:54:48Z",
+        "counts": {
+          "intersected": 554241,
+          "section": 74774,
+          "township": 2108
+        },
+        "unlocated_counts": {
+          "intersected": 0,
+          "section": 0,
+          "township": 0
+        }
+      }
+    },
+    {
+      "state": "WY",
+      "records": 1564124,
+      "unlocated": 0,
+      "source_bytes": 1359527936,
+      "atlas_bytes": 62263742,
+      "source_sha256": "2c067d674d67aefdad53bf7f83a7d216b194e9eb31f728f064901a1eb60e2809",
+      "decoded_geometry_sha256": "2bb315c3cb73bbd875145ac43168bd7fbff919218af069ff1c9d1090f0b1f543",
+      "geometry": {
+        "version": 2,
+        "vertex_codec": 2,
+        "vertices_per_block": 256,
+        "raw_vertex_bytes": 27384160,
+        "vertex_directory_bytes": 106976,
+        "features": 1564124,
+        "unique_xy_vertices": 1711510,
+        "quantization_decimals": 0,
+        "records_per_block": 128,
+        "file_bytes": 37595548,
+        "vertex_table_bytes": 20268373,
+        "compressed_record_block_bytes": 17024551,
+        "directory_bytes": 302496,
+        "maximum_latitude_error_degrees": 0,
+        "maximum_longitude_error_degrees": 0,
+        "collapsed_nonzero_xy_edges": 0,
+        "new_zero_area_rings": 0,
+        "ring_orientation_changes": 0,
+        "vertices_with_extra_ordinates": 0
+      },
+      "geometry_verified": 1564124,
+      "identifiers_verified": 1564124,
+      "build_seconds": 52.4471519,
+      "source": {
+        "version": 1,
+        "state": "WY",
+        "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+        "created_at": "2026-10-27T23:09:08Z",
+        "counts": {
+          "intersected": 1462426,
+          "section": 98808,
+          "township": 2890
+        },
+        "unlocated_counts": {
+          "intersected": 0,
+          "section": 0,
+          "township": 0
+        }
+      }
+    }
+  ]
+}
