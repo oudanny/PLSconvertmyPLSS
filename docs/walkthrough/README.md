@@ -1,7 +1,7 @@
 # A quick tour of the PLSS map
 
-These are real screenshots of the working Windows app, using the national atlas
-and the Go WebAssembly lookup engine. The captioned video is an edited screenshot
+These are real screenshots of the Windows XP-style map app, using the national
+atlas and the Go WebAssembly lookup engine. The captioned video is an edited screenshot
 walkthrough, not a recording of live animation or query timing.
 
 [Watch or download the captioned MP4](https://raw.githubusercontent.com/oudanny/PLSconvertmyPLSS/main/docs/walkthrough/plss-screenshot-walkthrough.mp4)
@@ -23,7 +23,7 @@ coverage everywhere in the country.
 
 ## 2. Enter coordinates and see the matching boundary
 
-This Reno example uses `39.5296, -119.8138`. The green marker is the requested
+This Reno example uses `39.5296, -119.8138`. The blue marker is the requested
 point; the orange outline is the containing published survey polygon. Clicking
 the map also performs a lookup. The background is a small offline overview,
 without streets or satellite imagery.
@@ -32,11 +32,14 @@ without streets or satellite imagery.
 
 ## 3. Copy the coordinate format you need
 
-The same point appears in decimal degrees, degrees/minutes/seconds,
-degrees/decimal minutes, UTM, and ISO 6709. Each format has a copy button.
+The same point appears as a readable **PLSS description**, decimal degrees,
+degrees/minutes/seconds, degrees/decimal minutes, UTM, and ISO 6709, all together.
+For Reno, PLSS reads **SW¼ of NE¼ · Sec. 11 · T. 19 N · R. 19 E**, with
+**Mount Diablo Meridian · Nevada** beneath it. Each format has a copy button.
+Expand **Published survey records** to inspect the original compact BLM IDs.
 JSON export includes the result, source provenance, and original boundary rings.
 
-![Coordinate outputs and export controls for the Reno point](03-coordinate-formats.jpg)
+![Readable PLSS alongside every coordinate format and export controls](03-coordinate-formats.jpg)
 
 ## 4. Go the other direction
 

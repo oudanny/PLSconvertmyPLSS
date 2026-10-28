@@ -73,6 +73,8 @@ for (const [state, latitude, longitude] of points) {
   assert.equal(coordinates.longitude, longitude);
   for (const match of matches) {
     assert(match.geometry.rings.length > 0);
+    assert.equal(typeof match.description, 'string');
+    assert(match.description.length > 0, 'published matches need a readable description or explicit fallback');
     let kind = match.layer === 'intersected' ? 'division' : match.layer;
     if (kind === 'division' && !match.identifiers.division && match.identifiers.survey) kind = 'survey';
     const id = match.identifiers[kind];
@@ -94,7 +96,10 @@ const gap = success('lookup', { latitude: 40.7128, longitude: -74.0060 });
 assert.equal(gap.result.no_match, true);
 assert.equal(gap.result.coordinates.latitude, 40.7128);
 assert.equal(invoke('find', { id: 'NV210050N0280E0SN190V6' }).ok, false);
-success('lookup', { latitude: 39.5296, longitude: -119.8138 });
+const readableReno = success('lookup', { latitude: 39.5296, longitude: -119.8138 }).result.matches.find(m => m.id === 'NV210190N0190E0SN110ASWNE');
+assert(readableReno, 'Reno subdivision missing');
+assert.equal(readableReno.description, 'SW¼ of NE¼ · Sec. 11 · T. 19 N · R. 19 E');
+assert.equal(readableReno.description_detail, 'Mount Diablo Meridian · Nevada');
 const nearbyBefore = success('info').stats;
 const nearbyTimes = [];
 for (let i = 0; i < 200; i++) {

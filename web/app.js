@@ -191,26 +191,35 @@
     $("results").classList.add("hidden"); $("fit-selection").classList.add("hidden");
     $("export-button").classList.add("hidden");
     $("matches").replaceChildren(); $("coordinate-results").replaceChildren();
+    if ($("survey-details")) $("survey-details").open = false;
     $("welcome").classList.remove("hidden");
     $("map-subtitle").textContent = "Click a point. Discover its description.";
   }
   const copySVG = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="10" height="11" rx="1.5"/><path d="M13 7V3H3v11h4"/></svg>';
-  function coordinateRow(label, value) {
-    const row = element("div", "coordinate-row");
+  function coordinateRow(label, value, options = {}) {
+    const row = element("div", "coordinate-row" + (options.plss ? " plss-coordinate-row" : ""));
     const detail = element("div");
     detail.append(element("small", "", label), element("code", "", value));
+    if (options.detail) detail.append(element("span", "coordinate-detail", options.detail));
+    row.append(detail);
+    if (options.copy === false) return row;
     const copy = element("button", "copy-button");
     copy.innerHTML = copySVG;
-    copy.setAttribute("aria-label", `Copy ${label.toLowerCase()}`);
-    copy.title = `Copy ${label.toLowerCase()}`;
+    const copyLabel = options.plss ? "PLSS description" : label.toLowerCase();
+    copy.setAttribute("aria-label", `Copy ${copyLabel}`);
+    copy.title = `Copy ${copyLabel}`;
     copy.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(value); toast("Coordinate copied."); }
+      try { await navigator.clipboard.writeText(options.detail ? `${value}\n${options.detail}` : value); toast(options.plss ? "PLSS description copied." : "Coordinate copied."); }
       catch { message("Copy is unavailable in this browser. Select the coordinate text to copy it."); }
     });
-    row.append(detail, copy); return row;
+    row.append(copy); return row;
   }
   function renderCoordinates(coordinates) {
     $("coordinate-results").replaceChildren();
+    const selected = lastResult?.matches[selectedIndex];
+    const plssLabel = lastResult?.matches.length > 1 ? `PLSS · MATCH ${selectedIndex + 1} OF ${lastResult.matches.length}` : "PLSS";
+    const plssText = selected ? selected.description || selected.label || selected.id || "Source record without an identifier" : atlas ? lastResult?.representative ? "No published record for this identifier" : "No published PLSS match at this location" : "Choose a local atlas for PLSS";
+    $("coordinate-results").append(coordinateRow(plssLabel, plssText, {plss:true,detail:selected?.description_detail,copy:!!selected}));
     if (!coordinates) return;
     const rows = [["DECIMAL DEGREES",coordinates.dd],["DEGREES · MINUTES · SECONDS",coordinates.dms],["DEGREES · DECIMAL MINUTES",coordinates.ddm],["UTM · WGS 84",coordinates.utm_text || "Outside the UTM latitude range"],["ISO 6709",coordinates.iso6709]];
     for (const [label,value] of rows) $("coordinate-results").append(coordinateRow(label,value));
@@ -239,13 +248,16 @@
     }
     result.matches.forEach((match,index) => {
       const card = element("button","match-card" + (index===0?" selected":""));
+      card.setAttribute("aria-pressed", String(index === 0));
       const meta = element("div","match-meta");
       meta.append(element("span","",stateNames[match.state]||match.state),element("span","",match.layer));
       const actualID = Object.entries(match.identifiers || {}).find(([,value]) => value && value === match.id);
       const idText = match.id ? `${actualID ? actualID[0] + " ID · " : ""}${match.id}` : "Source record without an identifier";
       const fallbackTitle = {intersected:"Published subdivision",section:"Published section",township:"Published township"}[match.layer] || "Published survey polygon";
-      const title = match.label && match.label !== match.id ? match.label : fallbackTitle;
-      card.append(meta,element("strong","",title),element("code","",idText),element("div","match-action","View survey boundary ↗"));
+      const title = match.description || (match.label && match.label !== match.id ? match.label : fallbackTitle);
+      card.append(meta,element("strong","",title));
+      if (match.description_detail) card.append(element("span","match-description-detail",match.description_detail));
+      card.append(element("code","",idText),element("div","match-action","Show this boundary"));
       card.addEventListener("click", () => selectMatch(index,true));
       $("matches").append(card);
     });
@@ -270,11 +282,11 @@
   function selectMatch(index, fit) {
     if (!lastResult) return;
     selectedIndex = index;
-    $("matches").querySelectorAll(".match-card").forEach((card,i)=>card.classList.toggle("selected",i===index));
+    $("matches").querySelectorAll(".match-card").forEach((card,i)=>{card.classList.toggle("selected",i===index);card.setAttribute("aria-pressed",String(i===index));});
     drawPolygons();
+    renderCoordinates(lastResult.representative ? lastResult.matches[index].representative : lastResult.coordinates);
     if (lastResult.representative) {
       const coordinate = lastResult.matches[index].representative;
-      renderCoordinates(coordinate);
       if (pointMarker) pointMarker.setLatLng([coordinate.latitude,coordinate.longitude+360*Math.round((map.getCenter().lng-coordinate.longitude)/360)]);
       $("map-coordinate").textContent=`${coordinate.latitude.toFixed(6)}, ${coordinate.longitude.toFixed(6)} · WGS 84`;
     }
@@ -314,7 +326,7 @@
     const center=map.getCenter().lng;
     L.geoJSON(MapGeometry.shiftGeoJSON(geographyData.land,center),{style:{color:"#b7c5ac",weight:.65,fillColor:"#f2f2e7",fillOpacity:1},interactive:false,smoothFactor:.5}).addTo(geography);
     L.geoJSON(MapGeometry.shiftGeoJSON(geographyData.states,center),{style:{color:"#99ac87",weight:.8,fillColor:"#f7f6ec",fillOpacity:.35},interactive:false,smoothFactor:.25}).addTo(geography);
-    L.geoJSON(MapGeometry.shiftGeoJSON(geographyData.lakes,center),{style:{color:"#bdcfc4",weight:.35,fillColor:"#e2ebe8",fillOpacity:1},interactive:false,smoothFactor:.5}).addTo(geography);
+    L.geoJSON(MapGeometry.shiftGeoJSON(geographyData.lakes,center),{style:{color:"#9abaca",weight:.35,fillColor:"#d1e4ee",fillOpacity:1},interactive:false,smoothFactor:.5}).addTo(geography);
   }
   function drawLabels() {
     labels.clearLayers();

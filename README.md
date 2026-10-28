@@ -7,7 +7,7 @@ A Go command-line app and reusable library for converting latitude/longitude and
 - PLSS: township/range/section, available aliquot subdivisions and government lots, or exact BLM identifiers.
 - Plain-text or JSON output, with optional polygon geometry.
 - Coordinate conversions run offline. PLSS queries can use BLM's public REST service, a state SQLite pack, or an experimental compact national atlas; no API key is required.
-- An offline map GUI runs the Go lookup engine in WebAssembly, with click-to-query polygons and locally bundled map geography.
+- A Windows XP-style offline map GUI runs the Go lookup engine in WebAssembly, with readable PLSS descriptions alongside coordinate formats, click-to-query polygons, and locally bundled map geography.
 
 PLSS describes an **area**, so converting PLSS to latitude/longitude returns a representative point inside a published polygon. It is not a surveyed corner or a unique coordinate for the land description. Coordinate-to-PLSS results depend on published coverage and may include multiple matches on boundaries.
 

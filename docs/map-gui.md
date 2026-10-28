@@ -31,6 +31,16 @@ requests to a remote API, CDN, or map tile provider.
 
 ## Use the map
 
+- The compact Windows XP-style interface keeps a readable **PLSS** row together
+  with decimal degrees, DMS, DDM, UTM, and ISO 6709 in **Converted coordinates**.
+  For example, the Reno result reads `SW¼ of NE¼ · Sec. 11 · T. 19 N · R. 19 E`,
+  with `Mount Diablo Meridian · Nevada` underneath. The PLSS copy button includes
+  both lines.
+- Expand **Published survey records** for the exact original BLM identifiers,
+  all matching polygons, and selection controls. Changing the selected polygon
+  updates the PLSS description; reverse lookups also update its representative
+  coordinates. Human-readable descriptions are display output; the **PLSS ID**
+  input still accepts exact published IDs.
 - Enter decimal degrees, DDM, DMS, or ISO 6709 on the **Lat / Long** tab.
 - Enter a zone, hemisphere, easting and northing on the **UTM** tab. `N` and `S`
   mean hemispheres; latitude bands must be explicit in the input syntax.
@@ -102,8 +112,8 @@ opening a browser; `--listen 127.0.0.1:PORT` selects a fixed local port.
 ## Verified desktop build
 
 The Windows portable folder `dist/national-us/` contains only `plssmap.exe`
-(17,463,296 bytes) and `us.atlas` (1,362,497,879 bytes), totaling
-**1,379,961,175 bytes (1.380 GB)**. The local atlas copy is a hard link to the
+(17,505,280 bytes) and `us.atlas` (1,362,497,879 bytes), totaling
+**1,380,003,159 bytes (1.380 GB)**. The local atlas copy is a hard link to the
 verified build; copying the folder to another device produces ordinary files.
 
 Actual browser checks on the development Windows laptop verified automatic
@@ -132,6 +142,13 @@ painting, Go garbage collection, and file-access mode affect response time.
 The reported Go heap is not the browser's total resident memory.
 The observed counters are retained in
 [`browser-national-samples.json`](../internal/mapengine/browser-national-samples.json).
+
+The updated XP-style presentation was checked at 1280×720: readable PLSS and all
+five coordinate formats fit simultaneously beside the map. Browser checks also
+covered exact-ID reverse lookup, missing-ID Anchorage geometry, a New York
+coverage gap, and a real four-polygon Reno boundary. Selecting a different
+government lot changed the PLSS row while retaining the original queried point.
+The [captioned walkthrough and screenshots](walkthrough/README.md) show this build.
 
 The automated Node probe runs the actual Go WASM engine with file access
 adapters, checks native/WASM parity for all 31 shards and 25 reverse identifiers,

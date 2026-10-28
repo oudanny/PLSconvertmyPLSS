@@ -26,10 +26,12 @@ type Coordinates struct {
 
 type Match struct {
 	offline.Hit
-	Label          string        `json:"label"`
-	Identifiers    Identifiers   `json:"identifiers"`
-	Geometry       plss.Geometry `json:"geometry"`
-	Representative Coordinates   `json:"representative"`
+	Label             string        `json:"label"`
+	Description       string        `json:"description"`
+	DescriptionDetail string        `json:"description_detail"`
+	Identifiers       Identifiers   `json:"identifiers"`
+	Geometry          plss.Geometry `json:"geometry"`
+	Representative    Coordinates   `json:"representative"`
 }
 
 // Identifiers distinguishes a record's actual published identifiers from the
@@ -145,7 +147,13 @@ func Execute(ctx context.Context, reader Reader, command string, request Request
 		}
 		rep := Format(coord.Point{Latitude: m.Representative.Latitude, Longitude: m.Representative.Longitude})
 		ids := Identifiers{Township: m.Attribute("PLSSID"), Section: m.Attribute("FRSTDIVID"), Division: m.Attribute("SECDIVID"), Survey: m.Attribute("SURVID")}
-		r.Matches = append(r.Matches, Match{Hit: hit, Label: m.Label, Identifiers: ids, Geometry: m.Geometry, Representative: rep})
+		description := plss.DescribeIdentifiers(ids.Township, ids.Section, ids.Division, ids.Survey)
+		if hit.Layer == "intersected" && ids.Division == "" && ids.Survey == "" && (ids.Section != "" || ids.Township != "") {
+			description.Detail += " · Subdivision identifier unavailable; showing parent description."
+		} else if hit.Layer == "section" && ids.Section == "" && ids.Township != "" {
+			description.Detail += " · Section identifier unavailable; showing parent township."
+		}
+		r.Matches = append(r.Matches, Match{Hit: hit, Label: m.Label, Description: description.Text, DescriptionDetail: description.Detail, Identifiers: ids, Geometry: m.Geometry, Representative: rep})
 		if r.Coordinates == nil {
 			c := rep
 			r.Coordinates = &c
