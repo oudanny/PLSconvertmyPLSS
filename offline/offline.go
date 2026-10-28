@@ -5,6 +5,7 @@ package offline
 
 import (
 	"context"
+	"io"
 
 	"github.com/oudanny/PLSconvertmyPLSS/internal/atlas"
 	"github.com/oudanny/PLSconvertmyPLSS/internal/regionatlas"
@@ -30,6 +31,17 @@ type Reader struct{ inner *regionatlas.Reader }
 func Open(path string) (*Reader, error) { return OpenWithOptions(path, Options{}) }
 func OpenWithOptions(path string, options Options) (*Reader, error) {
 	r, err := regionatlas.OpenWithOptions(path, regionatlas.Options{Buffered: options.Buffered, MaxOpenShards: options.LazyStateCache})
+	if err != nil {
+		return nil, err
+	}
+	return &Reader{inner: r}, nil
+}
+
+// OpenReaderAt borrows an immutable source without mapping or copying the
+// whole file. Close leaves source ownership with its caller. Initialize only
+// a few states at a time with LazyStateCache when memory is constrained.
+func OpenReaderAt(source io.ReaderAt, size int64, options Options) (*Reader, error) {
+	r, err := regionatlas.OpenReaderAt(source, size, regionatlas.Options{MaxOpenShards: options.LazyStateCache})
 	if err != nil {
 		return nil, err
 	}

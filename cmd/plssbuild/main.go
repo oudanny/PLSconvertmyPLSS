@@ -24,7 +24,7 @@ func main() {
 }
 func run(args []string, out, log io.Writer) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "help" {
-		_, err := fmt.Fprintln(out, "plssbuild state --db SOURCE.sqlite --out NEW.atlas [--vertices packed|raw|compressed]\nplssbuild bundle --out WEST.atlas --atlas AZ.atlas --atlas CA.atlas ...\nplssbuild west --work-dir data/west --out data/western-us.atlas [--source NV=data/nevada.sqlite]\nplssbuild verify --data WEST.atlas\nCreates and verifies exact conversion files; never overwrites. The west command downloads missing sources and reuses complete state files.")
+		_, err := fmt.Fprintln(out, "plssbuild state --db SOURCE.sqlite --out NEW.atlas [--vertices packed|raw|compressed]\nplssbuild bundle --out REGION.atlas --atlas AZ.atlas --atlas CA.atlas ...\nplssbuild west --work-dir data/west --out data/western-us.atlas [--source NV=data/nevada.sqlite]\nplssbuild national --work-dir data/us --out data/us.atlas [--states AK,AL,...]\nplssbuild verify --data REGION.atlas\nCreates and verifies exact conversion files; never overwrites. Regional commands download missing sources and reuse complete state files. National includes 30 published PLSS states plus an unassigned-source shard; it does not invent coverage for states without PLSS data.")
 		return err
 	}
 	if args[0] == "bundle" {
@@ -32,6 +32,9 @@ func run(args []string, out, log io.Writer) error {
 	}
 	if args[0] == "west" {
 		return runWest(args[1:], out, log)
+	}
+	if args[0] == "national" {
+		return runNational(args[1:], out, log)
 	}
 	if args[0] == "verify" {
 		return runVerify(args[1:], out, log)

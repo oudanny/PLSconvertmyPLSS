@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>PLSconvert · Map explorer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23264639'/%3E%3Cpath d='M14 32h36M32 14v36' stroke='%23f3f0e7' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='12' fill='none' stroke='%23f3f0e7' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="app.css">
+  <script defer src="vendor/leaflet/leaflet.js"></script>
+  <script defer src="geometry.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="PLSconvert home">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11"/><circle cx="20" cy="20" r="9"/><path d="M20 5v9m0 12v9M5 20h9m12 0h9"/></svg>
+      <span>PLS<span class="brand-light">convert</span><small>THE PLSS MAP EXPLORER</small></span>
+    </a>
+    <div class="top-center"><span class="nav-active">Explore</span><span class="nav-divider"></span><span>Coordinates, connected to land.</span></div>
+    <div class="top-actions"><span class="local-badge"><i></i>All local</span><button id="about-button" class="icon-button" aria-label="About this map">?</button></div>
+  </header>
+  <main class="workspace">
+    <aside class="sidebar" aria-label="Coordinate lookup">
+      <div class="sidebar-scroll">
+        <section class="search-section">
+          <div class="eyebrow">FIND YOUR PLACE</div>
+          <h1>From a point<br>to a land description.</h1>
+          <p class="intro">Enter coordinates, or click anywhere on the map to explore the survey beneath it.</p>
+          <div class="tabs" role="tablist" aria-label="Input type">
+            <button id="tab-latlon" role="tab" aria-selected="true" aria-controls="search-panel" data-kind="latlon" class="active">Lat / Long</button>
+            <button id="tab-utm" role="tab" aria-selected="false" aria-controls="search-panel" data-kind="utm" tabindex="-1">UTM</button>
+            <button id="tab-plss" role="tab" aria-selected="false" aria-controls="search-panel" data-kind="plss" tabindex="-1">PLSS ID</button>
+          </div>
+          <form id="search-form" autocomplete="off">
+            <div id="search-panel" role="tabpanel" aria-labelledby="tab-latlon">
+              <label id="query-label" for="query">Latitude, longitude</label>
+              <textarea id="query" rows="2" spellcheck="false" required placeholder="39.5296, -119.8138">39.5296, -119.8138</textarea>
+              <div id="id-kind-field" class="hidden"><label for="id-kind">Identifier type</label><select id="id-kind"><option value="division">Subdivision · SECDIVID</option><option value="section">Section · FRSTDIVID</option><option value="township">Township · PLSSID</option><option value="survey">Survey · SURVID</option></select></div>
+              <p class="field-help" id="query-help">Decimal degrees, DMS, DDM, or ISO 6709.</p>
+            </div>
+            <button id="search-button" type="submit" class="primary-button" disabled><span>Explore this location</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+          </form>
+          <div class="examples"><span>TRY</span><button data-example="reno">Reno</button><button data-example="boulder">Boulder</button><button data-example="anchorage">Anchorage</button></div>
+          <div id="message" class="message hidden" role="status" aria-live="polite"></div>
+        </section>
+        <section class="results-section hidden" id="results" aria-label="Lookup results">
+          <div class="section-heading"><h2>Published PLSS</h2><span id="match-count" class="count-badge">0</span></div>
+          <div id="matches"></div>
+          <div class="section-heading plss-heading"><h2>Your location</h2><span id="query-duration" class="subtle"></span></div>
+          <div id="coordinate-results" class="coordinate-results"></div>
+          <button id="export-button" class="text-button hidden">Export result as JSON <span aria-hidden="true">↗</span></button>
+        </section>
+        <section id="welcome" class="welcome-card">
+          <div class="small-crosshair" aria-hidden="true">⌖</div>
+          <div><strong>A map that travels with you.</strong><p>Your coordinates and atlas stay on this device. No account, API key, or connection required.</p></div>
+        </section>
+      </div>
+      <div class="atlas-card">
+        <div class="atlas-top"><span class="atlas-icon" aria-hidden="true">▱</span><div><span class="eyebrow">LOCAL ATLAS</span><strong id="atlas-name">No atlas selected</strong></div><span id="atlas-status" class="status-dot"></span></div>
+        <p id="atlas-detail">Open a .atlas file to enable PLSS lookups.</p>
+        <button id="open-atlas" class="secondary-button">Choose atlas file <span aria-hidden="true">↗</span></button>
+        <input type="file" id="atlas-file" accept=".atlas" class="visually-hidden" aria-label="Choose local atlas file">
+        <div id="engine-status" class="engine-status" role="status">Starting Go WebAssembly…</div>
+      </div>
+    </aside>
+    <section class="map-section" aria-label="Interactive map">
+      <div id="map" aria-label="Click the map to look up coordinates"></div>
+      <div class="map-title"><span class="eyebrow">PUBLIC LAND SURVEY SYSTEM</span><strong>Explore the United States</strong><span id="map-subtitle">Click a point. Discover its description.</span></div>
+      <div class="map-regions" role="group" aria-label="Map region"><button data-region="us" class="active">Lower 48</button><button data-region="ak">Alaska</button><button data-region="hi">Hawaii</button></div>
+      <div class="map-legend"><span><i class="legend-outline"></i>State boundary</span><span><i class="legend-fill"></i>Selected PLSS polygon</span></div>
+      <div class="map-coordinate" id="map-coordinate">WGS 84</div>
+      <div class="map-toast hidden" id="map-toast" role="status"></div>
+      <button id="fit-selection" class="map-fit hidden" aria-label="Zoom to selected polygon" title="Zoom to selected polygon">⌖ <span>Show polygon</span></button>
+      <div class="map-caption">Offline overview · Zoom in after a lookup to inspect the exact survey boundary.</div>
+    </section>
+  </main>
+  <dialog id="about-dialog">
+    <button id="close-about" class="dialog-close" aria-label="Close about">×</button>
+    <div class="eyebrow">A SMALL TOOL FOR A BIG LANDSCAPE</div><h2>Your map. Your machine.</h2>
+    <p>Coordinates and PLSS lookups run in a Go WebAssembly worker. The atlas is read in small pieces; it is never uploaded. The launcher serves local application files only.</p>
+    <p>PLSS describes an area. A reverse lookup returns a representative point inside the published polygon, not a surveyed corner. Some areas have no published PLSS coverage; boundary points can have multiple matches.</p>
+    <p>The compact reader accepts exact BLM identifiers. Structured township/range input remains available in the separate <code>plssconvert</code> CLI.</p>
+    <p>Survey data: Bureau of Land Management. Overview geography: Natural Earth, public domain. Map renderer: Leaflet. Map outlines are generalized for display; selected PLSS polygons retain their source coordinates.</p>
+    <p class="field-help">BLM data are not legal land surveys. This project is not affiliated with or endorsed by BLM. No online street or satellite tiles are requested.</p>
+  </dialog>
+</body>
+</html>

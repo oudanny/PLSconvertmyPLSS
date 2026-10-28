@@ -10,3 +10,6 @@
 coverage.out
 .DS_Store
 Thumbs.db
+/web/runtime/plss.wasm
+/web/runtime/wasm_exec.js
+/web/runtime/GO-LICENSE.txt

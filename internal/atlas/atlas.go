@@ -236,7 +236,7 @@ func openSource(source io.ReaderAt, size int64, data []byte) (*Reader, error) {
 		a.view, err = spatialindex.OpenView(data[s.Offset : s.Offset+s.Size])
 	} else {
 		r, size = section("index")
-		a.Index, err = spatialindex.Open(r, 0, size)
+		a.view, err = spatialindex.OpenReaderAt(r, size)
 	}
 	if err != nil {
 		return fail(err)

@@ -1,3 +1,5 @@
+//go:build !js
+
 package plss
 
 import (
@@ -36,16 +38,21 @@ type DownloadProgress struct {
 	Total     int
 }
 
-// SupportedDownloadStates returns the contiguous western states supported by
+// SupportedDownloadStates returns the states with published national PLSS data
 // DownloadPack. The returned slice is a fresh copy that callers may modify.
 // Availability and completeness still depend on BLM's published source data.
 func SupportedDownloadStates() []string {
+	return []string{"AK", "AL", "AR", "AZ", "CA", "CO", "FL", "IA", "ID", "IL", "IN", "KS", "LA", "MI", "MN", "MO", "MS", "MT", "ND", "NE", "NM", "NV", "OH", "OK", "OR", "SD", "UT", "WA", "WI", "WY"}
+}
+
+// WesternDownloadStates returns the original contiguous eleven-state scope.
+func WesternDownloadStates() []string {
 	return []string{"AZ", "CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY"}
 }
 
 func supportedDownloadState(state string) bool {
 	switch state {
-	case "AZ", "CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY":
+	case "AK", "AL", "AR", "AZ", "CA", "CO", "FL", "IA", "ID", "IL", "IN", "KS", "LA", "MI", "MN", "MO", "MS", "MT", "ND", "NE", "NM", "NV", "OH", "OK", "OR", "SD", "UT", "WA", "WI", "WY":
 		return true
 	default:
 		return false
@@ -54,6 +61,10 @@ func supportedDownloadState(state string) bool {
 
 const downloadBatchSize = 1000
 const downloadResponseLimit = 128 * 1024 * 1024
+
+// ErrNoPublishedRecords means all three source layers confirmed an empty
+// requested partition; no output pack was created.
+var ErrNoPublishedRecords = errors.New("BLM has no published records")
 
 type packDownloader struct {
 	base     string
@@ -88,6 +99,25 @@ type downloadFeature struct {
 // link, which atomically refuses an existing destination even on Unix (where
 // os.Rename would replace it). The filesystem must support hard links.
 func DownloadPack(ctx context.Context, path string, options DownloadOptions) (PackMetadata, error) {
+	return downloadPack(ctx, path, options, false)
+}
+
+// DownloadUnassignedPack preserves national source records whose PLSSID does not
+// begin with any supported state prefix, including blank and null identifiers.
+// Their original attributes remain unchanged. The pack's state marker is ZZ,
+// meaning unassigned source records, not a state or inferred geographic location.
+// Together with all SupportedDownloadStates packs, this partitions the complete
+// published township, section, and intersected layers without omitting bad IDs.
+// Options.State must be empty. An explicit null ID list for this partition is
+// accepted only after the identical query independently confirms a zero count.
+func DownloadUnassignedPack(ctx context.Context, path string, options DownloadOptions) (PackMetadata, error) {
+	if options.State != "" {
+		return PackMetadata{}, errors.New("unassigned download does not accept a state")
+	}
+	return downloadPack(ctx, path, options, true)
+}
+
+func downloadPack(ctx context.Context, path string, options DownloadOptions, unassigned bool) (PackMetadata, error) {
 	var zero PackMetadata
 	state := strings.ToUpper(strings.TrimSpace(options.State))
 	if state == "" {
@@ -95,6 +125,9 @@ func DownloadPack(ctx context.Context, path string, options DownloadOptions) (Pa
 	}
 	if !supportedDownloadState(state) {
 		return zero, fmt.Errorf("unsupported download state %q; supported states: %s", state, strings.Join(SupportedDownloadStates(), ", "))
+	}
+	if unassigned {
+		state = "ZZ"
 	}
 	if strings.TrimSpace(path) == "" {
 		return zero, errors.New("a data pack output path is required")
@@ -148,7 +181,7 @@ func DownloadPack(ctx context.Context, path string, options DownloadOptions) (Pa
 		return zero, err
 	}
 	if total == 0 {
-		return zero, fmt.Errorf("BLM has no published records for %s in township, section, or intersected layers; no pack was created", state)
+		return zero, fmt.Errorf("%w for %s in township, section, or intersected layers; no pack was created", ErrNoPublishedRecords, state)
 	}
 	parent := filepath.Dir(path)
 	if err := os.MkdirAll(parent, 0755); err != nil {
@@ -195,7 +228,15 @@ func DownloadPack(ctx context.Context, path string, options DownloadOptions) (Pa
 }
 
 func (d *packDownloader) snapshot(ctx context.Context, layer int, state string) (layerSnapshot, error) {
-	params := url.Values{"f": {"json"}, "where": {"PLSSID LIKE '" + state + "%'"}, "returnIdsOnly": {"true"}}
+	where := "PLSSID LIKE '" + state + "%'"
+	if state == "ZZ" {
+		parts := make([]string, 0, len(SupportedDownloadStates()))
+		for _, s := range SupportedDownloadStates() {
+			parts = append(parts, "PLSSID LIKE '"+s+"%'")
+		}
+		where = "PLSSID IS NULL OR NOT (" + strings.Join(parts, " OR ") + ")"
+	}
+	params := url.Values{"f": {"json"}, "where": {where}, "returnIdsOnly": {"true"}}
 	body, err := d.post(ctx, layer, params)
 	if err != nil {
 		return layerSnapshot{}, err
@@ -207,6 +248,29 @@ func (d *packDownloader) snapshot(ctx context.Context, layer int, state string) 
 	}
 	if err := json.Unmarshal(body, &result); err != nil {
 		return layerSnapshot{}, fmt.Errorf("decode layer %d object IDs: %w", layer, err)
+	}
+	if result.ObjectIDs == nil && state == "ZZ" && strings.TrimSpace(result.ObjectIDFieldName) != "" && !result.ExceededTransferLimit {
+		// ArcGIS returns an explicit null instead of [] for the genuinely
+		// empty residual township selection. Never infer emptiness from null:
+		// require a second, well-formed count response for the identical filter.
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(body, &fields); err == nil && bytes.Equal(bytes.TrimSpace(fields["objectIds"]), []byte("null")) {
+			countBody, err := d.post(ctx, layer, url.Values{"f": {"json"}, "where": {where}, "returnCountOnly": {"true"}})
+			if err != nil {
+				return layerSnapshot{}, err
+			}
+			var count struct {
+				Count                 *int64 `json:"count"`
+				ExceededTransferLimit bool   `json:"exceededTransferLimit"`
+			}
+			if err := json.Unmarshal(countBody, &count); err != nil {
+				return layerSnapshot{}, fmt.Errorf("decode empty residual layer %d count: %w", layer, err)
+			}
+			if count.Count != nil && *count.Count == 0 && !count.ExceededTransferLimit {
+				empty := []int64{}
+				result.ObjectIDs = &empty
+			}
+		}
 	}
 	if strings.TrimSpace(result.ObjectIDFieldName) == "" || result.ObjectIDs == nil {
 		return layerSnapshot{}, fmt.Errorf("layer %d has an invalid object-ID snapshot for %s: objectIdFieldName and an explicit objectIds array are required", layer, state)

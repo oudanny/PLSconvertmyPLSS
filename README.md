@@ -6,11 +6,26 @@ A Go command-line app and reusable library for converting latitude/longitude and
 - UTM: WGS 84, northern and southern hemispheres, with Norway and Svalbard zone exceptions.
 - PLSS: township/range/section, available aliquot subdivisions and government lots, or exact BLM identifiers.
 - Plain-text or JSON output, with optional polygon geometry.
-- Coordinate conversions run offline. PLSS queries can use BLM's public REST service, a state SQLite pack, or an experimental compact western-US atlas; no API key is required.
+- Coordinate conversions run offline. PLSS queries can use BLM's public REST service, a state SQLite pack, or an experimental compact national atlas; no API key is required.
+- An offline map GUI runs the Go lookup engine in WebAssembly, with click-to-query polygons and locally bundled map geography.
 
 PLSS describes an **area**, so converting PLSS to latitude/longitude returns a representative point inside a published polygon. It is not a surveyed corner or a unique coordinate for the land description. Coordinate-to-PLSS results depend on published coverage and may include multiple matches on boundaries.
 
+![Offline national PLSS map with local atlas selection and coordinate conversion](docs/map-preview.jpg)
+
 ## Install
+
+For the **map GUI**, run this from a repository checkout with Go 1.26 or newer:
+
+```sh
+go run ./internal/guibuild
+bin/plssmap --data data/us.atlas
+```
+
+Use `bin/plssmap.exe` on Windows. The launcher embeds its map, UI and Go WASM
+engine; the only other runtime file is the atlas. It opens your browser and
+performs all queries locally. See [the GUI guide](docs/map-gui.md) and
+[national atlas coverage](docs/national-atlas.md). The CLI installation follows.
 
 Requires Go 1.26 or newer. SQLite support uses the pure-Go `modernc.org/sqlite` driver; no C compiler, CGO or separate SQLite installation is required.
 
@@ -71,7 +86,7 @@ Run `plssconvert <command> --help` for all flags. Place flags after the command.
 
 ## Offline state PLSS
 
-Download a state's published townships, sections and intersected subdivisions once, then use the resulting SQLite pack without a network connection. Supported states are AZ, CA, CO, ID, MT, NM, NV, OR, UT, WA and WY:
+Download a state's published townships, sections and intersected subdivisions once, then use the resulting SQLite pack without a network connection. Supported source prefixes are AK, AL, AR, AZ, CA, CO, FL, IA, ID, IL, IN, KS, LA, MI, MN, MO, MS, MT, ND, NE, NM, NV, OH, OK, OR, SD, UT, WA, WI and WY:
 
 ```sh
 plssconvert data download --state NV --out data/nevada.sqlite
@@ -152,13 +167,13 @@ The snippet belongs inside a function returning `error` and uses imports `contex
 
 For offline queries, `plss.OpenPack(path)` returns a local provider with the same `Lookup`, `Find` and `FindID` methods. Close it when finished. Both the HTTP client and local pack implement `plss.Provider`; see the [offline library example](docs/offline-nevada.md#go-library).
 
-The public `offline` library and `plssatlas` CLI read compact state or multi-state files. A western bundle contains the **11 contiguous western states in one file**, preserving original polygon coordinates and published identifiers. State readers open on demand. See [western atlas builds and measurements](docs/western-atlas.md) for exact scope, sizes, verification and remaining limitations. The stable `plssconvert` command continues to use SQLite packs and supports structured township/range descriptions; the experimental compact reader currently accepts exact published IDs.
+The public `offline` library, `plssatlas` CLI and WebAssembly map read compact state or multi-state files, preserving original polygon coordinates and published identifiers. The national build includes all 30 published state prefixes and a residual partition for records without those prefixes. It does not imply geographic PLSS coverage everywhere in the U.S. State readers open on demand. See [national atlas coverage](docs/national-atlas.md) and the earlier [western measurements](docs/western-atlas.md). The stable `plssconvert` command continues to use SQLite packs and supports structured township/range descriptions; the experimental compact reader currently accepts exact published IDs.
 
 ```sh
 go install github.com/oudanny/PLSconvertmyPLSS/cmd/plssbuild@latest
 go install github.com/oudanny/PLSconvertmyPLSS/cmd/plssatlas@latest
-plssbuild west --work-dir data/west --out data/western-us.atlas
-plssatlas latlon --value '40.015,-105.2705' --data data/western-us.atlas
+plssbuild national --work-dir data/us --out data/us.atlas
+plssatlas latlon --value '40.015,-105.2705' --data data/us.atlas
 ```
 
 The builder downloads missing sources, verifies every geometry and identifier,
@@ -166,6 +181,8 @@ and reuses completed state files on a later run. An interrupted state download
 restarts that state. Build on a machine with network access and temporary disk
 space; the finished converter needs only its executable and the atlas file.
 To reuse an existing Nevada source, add `--source NV=data/nevada.sqlite`.
+The `west` command retains its original 11-state scope. To reuse completed
+western state builds for a national bundle, use their existing work directory.
 
 For repeated lookups, keep one `offline.Reader` open:
 

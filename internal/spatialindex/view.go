@@ -4,31 +4,54 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 )
 
-// View searches an immutable serialized index without copying its record or
-// layer arrays. The caller must keep the backing bytes alive and unchanged,
-// including keeping any memory mapping open until all searches have finished.
-// Searches may run concurrently. Only the much smaller node array is copied.
+// View searches an immutable serialized index. OpenView borrows record and
+// layer arrays; OpenReaderAt borrows leaf records and owns the small layer
+// array. Both retain the much smaller node array. The caller must keep backing
+// bytes/source available and unchanged until all searches have finished.
+// Searches may run concurrently.
 //
 // OpenView validates the tree and layers without reading record pages. Bounds
 // in visited leaves are validated during searches; Validate explicitly checks
 // every leaf. A successful open is therefore not a full file integrity audit.
 type View struct {
-	records   []byte
-	layers    []byte
-	nodes     []node
-	root      uint32
-	stride    int
-	quantBits uint8
+	source      io.ReaderAt
+	ownedLayers bool
+	records     []byte
+	layers      []byte
+	nodes       []node
+	root        uint32
+	stride      int
+	quantBits   uint8
 }
 
 // OpenView opens exactly one serialized index component. Slice a larger mapped
 // container to its index section before calling this function. The on-disk
 // format is the same as Index.WriteTo and Open.
 func OpenView(data []byte) (*View, error) {
-	if len(data) < headerSize {
+	return openView(data, int64(len(data)), nil)
+}
+
+// OpenReaderAt keeps the small tree and layer array in memory, and borrows the
+// immutable source for candidate leaf records. It validates the same tree as
+// OpenView without reading all leaf records. Reads during search are bounded
+// by one leaf (at most 256 records). The source remains owned by its caller.
+func OpenReaderAt(source io.ReaderAt, size int64) (*View, error) {
+	if source == nil || size < headerSize {
+		return nil, errors.New("invalid index source")
+	}
+	header := make([]byte, headerSize)
+	if _, err := source.ReadAt(header, 0); err != nil {
+		return nil, err
+	}
+	return openView(header, size, source)
+}
+
+func openView(data []byte, size int64, source io.ReaderAt) (*View, error) {
+	if len(data) < headerSize || size < headerSize {
 		return nil, errors.New("invalid index section")
 	}
 	version := binary.LittleEndian.Uint32(data[8:])
@@ -43,18 +66,40 @@ func OpenView(data []byte) (*View, error) {
 		stride = 12
 	}
 	nr, nn := binary.LittleEndian.Uint64(data[16:]), binary.LittleEndian.Uint64(data[24:])
-	if nr > maxEntries || nn > 2*nr || uint64(len(data)) != headerSize+nr*uint64(stride+1)+nn*24 {
+	if nr > maxEntries || nn > 2*nr || uint64(size) != headerSize+nr*uint64(stride+1)+nn*24 {
 		return nil, errors.New("invalid spatial index size")
 	}
 	fanout, root := binary.LittleEndian.Uint32(data[12:]), binary.LittleEndian.Uint32(data[32:])
 	if fanout < 2 || fanout > 256 || (nn == 0 && (nr != 0 || root != math.MaxUint32)) || (nn > 0 && root != uint32(nn-1)) {
 		return nil, errors.New("invalid spatial index root or fanout")
 	}
-	leafEnd := headerSize + int(nr)*stride
-	layerEnd := leafEnd + int(nr)
-	v := &View{
-		records: data[headerSize:leafEnd:leafEnd], layers: data[leafEnd:layerEnd:layerEnd],
-		nodes: make([]node, int(nn)), root: root, stride: stride, quantBits: uint8(bits),
+
+	maxInt := uint64(^uint(0) >> 1)
+	if nr > maxInt/uint64(stride) || nn > maxInt/24 {
+		return nil, errors.New("index arrays exceed platform address space")
+	}
+	leafEnd := int64(headerSize) + int64(nr)*int64(stride)
+	layerEnd := leafEnd + int64(nr)
+	v := &View{source: source, nodes: make([]node, int(nn)), root: root, stride: stride, quantBits: uint8(bits)}
+	var nodeData []byte
+	if source == nil {
+		v.records = data[headerSize:leafEnd:leafEnd]
+		v.layers = data[leafEnd:layerEnd:layerEnd]
+		nodeData = data[layerEnd:]
+	} else {
+		v.ownedLayers = true
+		v.layers = make([]byte, int(nr))
+		nodeData = make([]byte, int(nn)*24)
+		if len(v.layers) > 0 {
+			if _, err := source.ReadAt(v.layers, leafEnd); err != nil {
+				return nil, err
+			}
+		}
+		if len(nodeData) > 0 {
+			if _, err := source.ReadAt(nodeData, layerEnd); err != nil {
+				return nil, err
+			}
+		}
 	}
 	// Packed leaves partition records, and subsequent internal nodes partition
 	// all earlier nodes except the root. Checking these consecutive ranges
@@ -63,7 +108,7 @@ func OpenView(data []byte) (*View, error) {
 	var nextRecord, nextChild uint64
 	seenBranch := false
 	for i := range v.nodes {
-		p := data[layerEnd+i*24:]
+		p := nodeData[i*24:]
 		n := node{readBox(p), binary.LittleEndian.Uint32(p[16:]), binary.LittleEndian.Uint32(p[20:])}
 		count := n.flags & 0xffff
 		if !validBox(n.box) || count == 0 || count > fanout || n.flags&^(leafFlag|7<<16|0xffff) != 0 {
@@ -111,12 +156,18 @@ func OpenView(data []byte) (*View, error) {
 func (v *View) Len() int { return len(v.layers) }
 
 func (v *View) ByteSize() int64 {
-	return headerSize + int64(len(v.records)) + int64(len(v.layers)) + int64(len(v.nodes))*24
+	return headerSize + int64(len(v.layers))*int64(v.stride+1) + int64(len(v.nodes))*24
 }
 
 // MemoryBytes reports owned array bytes, excluding the borrowed backing slice.
 // A memory mapping also consumes resident pages as they are accessed.
-func (v *View) MemoryBytes() int64 { return int64(cap(v.nodes)) * 24 }
+func (v *View) MemoryBytes() int64 {
+	n := int64(cap(v.nodes)) * 24
+	if v.ownedLayers {
+		n += int64(cap(v.layers))
+	}
+	return n
+}
 
 func (v *View) Search(lon, lat float64) ([]Match, error) {
 	return v.AppendSearch(nil, lon, lat, 0)
@@ -163,12 +214,28 @@ func (v *View) AppendSearch(dst []Match, lon, lat float64, layer uint8) ([]Match
 	return deduplicate(dst, base), nil
 }
 
+func (v *View) leafRecords(first, count uint32) ([]byte, error) {
+	start, end := int64(first)*int64(v.stride), int64(first+count)*int64(v.stride)
+	if v.source == nil {
+		return v.records[start:end:end], nil
+	}
+	data := make([]byte, int(count)*v.stride)
+	if _, err := v.source.ReadAt(data, headerSize+start); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 func (v *View) searchLeaf(dst []Match, n node, lon, lat float64, layer uint8, search bool) ([]Match, error) {
 	end := n.first + (n.flags & 0xffff)
+	records, err := v.leafRecords(n.first, n.flags&0xffff)
+	if err != nil {
+		return dst, err
+	}
 	if v.quantBits == 0 {
 		bounds := emptyBox()
 		for i := n.first; i < end; i++ {
-			p := v.records[int(i)*v.stride:]
+			p := records[int(i-n.first)*v.stride:]
 			b := readBox(p)
 			if !validBox(b) {
 				return dst, errors.New("invalid indexed bounds")
@@ -196,7 +263,7 @@ func (v *View) searchLeaf(dst []Match, n node, lon, lat float64, layer uint8, se
 	const ulps = 8
 	tx, ty := math.Abs(px)*2.220446049250313e-16*ulps+1e-12, math.Abs(py)*2.220446049250313e-16*ulps+1e-12
 	for i := n.first; i < end; i++ {
-		p := v.records[int(i)*v.stride:]
+		p := records[int(i-n.first)*v.stride:]
 		var q [4]uint16
 		if v.quantBits == 8 {
 			q = [4]uint16{uint16(p[0]), uint16(p[1]), uint16(p[2]), uint16(p[3])}
@@ -231,17 +298,29 @@ func (v *View) Validate() error {
 func (v *View) ValidateCoverage(count uint32, layer func(uint32) uint8) error {
 	seen := make([]byte, (uint64(count)+7)/8)
 	unique := uint32(0)
-	for i, l := range v.layers {
-		id := binary.LittleEndian.Uint32(v.records[i*v.stride+v.stride-4:])
-		if id == 0 || id > count || l != layer(id) {
-			return errors.New("spatial feature ID/layer disagrees with feature table")
+
+	for _, n := range v.nodes {
+		if n.flags&leafFlag == 0 {
+			continue
 		}
-		p, bit := (id-1)/8, byte(1<<((id-1)%8))
-		if seen[p]&bit == 0 {
-			seen[p] |= bit
-			unique++
+		records, err := v.leafRecords(n.first, n.flags&0xffff)
+		if err != nil {
+			return err
+		}
+		for j := uint32(0); j < n.flags&0xffff; j++ {
+			l := v.layers[n.first+j]
+			id := binary.LittleEndian.Uint32(records[int(j)*v.stride+v.stride-4:])
+			if id == 0 || id > count || l != layer(id) {
+				return errors.New("spatial feature ID/layer disagrees with feature table")
+			}
+			p, bit := (id-1)/8, byte(1<<((id-1)%8))
+			if seen[p]&bit == 0 {
+				seen[p] |= bit
+				unique++
+			}
 		}
 	}
+
 	if unique != count {
 		return errors.New("spatial index omits feature records")
 	}

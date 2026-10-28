@@ -1,0 +1,579 @@
+{
+  "file_bytes": 1362497879,
+  "first_pass_spread_mixed_state": {
+    "queries": 31000,
+    "mean_us": 38.600180645161295,
+    "median_us": 32.4,
+    "p95_us": 82.5,
+    "p99_us": 225,
+    "allocated_bytes_per_query": 21058.02064516129,
+    "allocations_per_query": 52.27445161290323
+  },
+  "first_query_us_by_state": {
+    "AK": 10802.4,
+    "AL": 3220.5,
+    "AR": 4160.3,
+    "AZ": 9199.6,
+    "CA": 19236.7,
+    "CO": 12295.3,
+    "FL": 4392.2,
+    "IA": 7616.6,
+    "ID": 21197.2,
+    "IL": 7008.8,
+    "IN": 5433.5,
+    "KS": 3757.8,
+    "LA": 6173.6,
+    "MI": 10487.4,
+    "MN": 9032,
+    "MO": 6986.2,
+    "MS": 5854.6,
+    "MT": 12669.9,
+    "ND": 5881.8,
+    "NE": 3693.2,
+    "NM": 9746.3,
+    "NV": 17249.9,
+    "OH": 4200.1,
+    "OK": 9394.4,
+    "OR": 8145.2,
+    "SD": 11749.7,
+    "UT": 6941.7,
+    "WA": 7105.5,
+    "WI": 11925.1,
+    "WY": 16303.9,
+    "ZZ": 10605.1
+  },
+  "go_version": "go1.27.3",
+  "note": "Mapped queries use warm OS pages. first_pass_spread_mixed_state uses a fresh reader separately for timing and allocation passes; Verify initializes indexes and warms file pages without preparing polygons. Prepared/geometry caches begin empty and may fill naturally within each pass. With a state cap below the state count, index evictions/reloads remain part of the measured workload. spread_mixed_state is the compatibility alias for repeated_spread_mixed_state: that reader has already queried the validated points and may reuse prepared geometry. Setup, verification, timers and cleanup are excluded from allocations; timing includes per-query timer overhead. Oracle compares state/layer/source-row-ID/published-ID multisets using source SQLite candidates and polygons. Reverse samples include bounded explicit survey and unlocated records. Each first-query-by-state measurement uses a fresh reader, excludes opening, and may initialize overlapping states; its OS cache state is uncontrolled. Go heap excludes mapped resident pages. These sampled checks do not prove every possible query.",
+  "open_go_heap_delta_bytes": 11995832,
+  "open_us": 46222.6,
+  "queries_with_hits": 36796,
+  "query_checks": 42296,
+  "repeated_spread_mixed_state": {
+    "queries": 31000,
+    "mean_us": 12.248354838709679,
+    "median_us": 5.7,
+    "p95_us": 36.4,
+    "p99_us": 151.1,
+    "allocated_bytes_per_query": 6901.842838709677,
+    "allocations_per_query": 14.700387096774193
+  },
+  "repeated_state_representatives": {
+    "queries": 10000,
+    "mean_us": 3.0609499999999996,
+    "median_us": 2.4,
+    "p95_us": 5.1,
+    "p99_us": 14.8,
+    "allocated_bytes_per_query": 569.6424,
+    "allocations_per_query": 10.1292
+  },
+  "reverse_id_checks": 8602,
+  "spread_mixed_state": {
+    "queries": 31000,
+    "mean_us": 12.248354838709679,
+    "median_us": 5.7,
+    "p95_us": 36.4,
+    "p99_us": 151.1,
+    "allocated_bytes_per_query": 6901.842838709677,
+    "allocations_per_query": 14.700387096774193
+  },
+  "state_cache_cap": 0,
+  "state_readers_open": 31,
+  "states": [
+    {
+      "version": 1,
+      "state": "AK",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:22:35Z",
+      "counts": {
+        "intersected": 711051,
+        "section": 512701,
+        "township": 18339
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "AL",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:38:22Z",
+      "counts": {
+        "intersected": 134124,
+        "section": 52306,
+        "township": 1541
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "AR",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:38:38Z",
+      "counts": {
+        "intersected": 534808,
+        "section": 54804,
+        "township": 1584
+      },
+      "unlocated_counts": {
+        "intersected": 1,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "AZ",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T22:55:25Z",
+      "counts": {
+        "intersected": 1422750,
+        "section": 116188,
+        "township": 3413
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "CA",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T23:00:34Z",
+      "counts": {
+        "intersected": 2134658,
+        "section": 141935,
+        "township": 4714
+      },
+      "unlocated_counts": {
+        "intersected": 18,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "CO",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T23:00:24Z",
+      "counts": {
+        "intersected": 1960493,
+        "section": 104083,
+        "township": 3058
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "FL",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:38:58Z",
+      "counts": {
+        "intersected": 153371,
+        "section": 51028,
+        "township": 1731
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "IA",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:33:13Z",
+      "counts": {
+        "intersected": 890563,
+        "section": 56734,
+        "township": 1640
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "ID",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T23:06:16Z",
+      "counts": {
+        "intersected": 1161437,
+        "section": 85877,
+        "township": 2497
+      },
+      "unlocated_counts": {
+        "intersected": 1,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "IL",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:39:37Z",
+      "counts": {
+        "intersected": 93603,
+        "section": 56845,
+        "township": 1748
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "IN",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:42:21Z",
+      "counts": {
+        "intersected": 67991,
+        "section": 36340,
+        "township": 1103
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "KS",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:40:09Z",
+      "counts": {
+        "intersected": 98883,
+        "section": 82466,
+        "township": 2360
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "LA",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:40:44Z",
+      "counts": {
+        "intersected": 111247,
+        "section": 41342,
+        "township": 1432
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "MI",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:30:18Z",
+      "counts": {
+        "intersected": 920351,
+        "section": 59975,
+        "township": 1916
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "MN",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:27:09Z",
+      "counts": {
+        "intersected": 1298011,
+        "section": 84531,
+        "township": 2542
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "MO",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:40:31Z",
+      "counts": {
+        "intersected": 163110,
+        "section": 67535,
+        "township": 2022
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "MS",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:36:30Z",
+      "counts": {
+        "intersected": 710094,
+        "section": 49793,
+        "township": 1550
+      },
+      "unlocated_counts": {
+        "intersected": 1,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "MT",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T23:09:14Z",
+      "counts": {
+        "intersected": 2271829,
+        "section": 149176,
+        "township": 4191
+      },
+      "unlocated_counts": {
+        "intersected": 2,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "ND",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:31:47Z",
+      "counts": {
+        "intersected": 1131664,
+        "section": 71486,
+        "township": 2067
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "NE",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:41:10Z",
+      "counts": {
+        "intersected": 124147,
+        "section": 78136,
+        "township": 2243
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "NM",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T23:15:31Z",
+      "counts": {
+        "intersected": 1746480,
+        "section": 110236,
+        "township": 3299
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 1,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "NV",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T18:41:01Z",
+      "counts": {
+        "intersected": 1394969,
+        "section": 112133,
+        "township": 3380
+      },
+      "unlocated_counts": {
+        "intersected": 1,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "OH",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:41:56Z",
+      "counts": {
+        "intersected": 73217,
+        "section": 29140,
+        "township": 1006
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "OK",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:26:42Z",
+      "counts": {
+        "intersected": 1139388,
+        "section": 70926,
+        "township": 2078
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "OR",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T22:57:05Z",
+      "counts": {
+        "intersected": 1472084,
+        "section": 104015,
+        "township": 2940
+      },
+      "unlocated_counts": {
+        "intersected": 1,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "SD",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:22:36Z",
+      "counts": {
+        "intersected": 1255781,
+        "section": 78451,
+        "township": 2339
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "UT",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T23:05:48Z",
+      "counts": {
+        "intersected": 1228213,
+        "section": 84754,
+        "township": 2566
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "WA",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T22:54:48Z",
+      "counts": {
+        "intersected": 554241,
+        "section": 74774,
+        "township": 2108
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "WI",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:35:21Z",
+      "counts": {
+        "intersected": 878687,
+        "section": 57368,
+        "township": 1687
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "WY",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-27T23:09:08Z",
+      "counts": {
+        "intersected": 1462426,
+        "section": 98808,
+        "township": 2890
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 0,
+        "township": 0
+      }
+    },
+    {
+      "version": 1,
+      "state": "ZZ",
+      "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+      "created_at": "2026-10-28T00:42:49Z",
+      "counts": {
+        "intersected": 66665,
+        "section": 2,
+        "township": 0
+      },
+      "unlocated_counts": {
+        "intersected": 0,
+        "section": 1,
+        "township": 0
+      }
+    }
+  ]
+}

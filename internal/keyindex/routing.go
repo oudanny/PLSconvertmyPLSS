@@ -60,6 +60,16 @@ func routingPrefixes(m manifest) []string {
 // ReadRoutingPrefixes reads the small dictionary header without copying packed
 // feature rows or scanning postings. Full key-index validation is separate.
 func ReadRoutingPrefixes(r io.ReaderAt, size int64) ([]string, error) {
+	filter, err := ReadIDFilter(r, size)
+	if err != nil {
+		return nil, err
+	}
+	return filter.Prefixes(), nil
+}
+
+// ReadIDFilter reads the same validated dictionary header as routing, retaining
+// a conservative field-aware filter without loading packed feature rows.
+func ReadIDFilter(r io.ReaderAt, size int64) (*IDFilter, error) {
 	var h [12]byte
 	if size < 12 || size > 1<<30 {
 		return nil, errors.New("invalid key-index size")
@@ -85,9 +95,26 @@ func ReadRoutingPrefixes(r io.ReaderAt, size int64) ([]string, error) {
 	if m.Width < 1 || m.Width > 8 || uint64(m.Layers[0])+uint64(m.Layers[1])+uint64(m.Layers[2]) != uint64(m.Count) || uint64(m.Count)*uint64(m.Width) > uint64(size-12-n) {
 		return nil, errors.New("invalid routing key layout")
 	}
-	for _, dict := range m.Dicts {
-		if len(dict) == 0 || dict[0] != (Part{}) {
+	totalBits := 0
+	for i, dict := range m.Dicts {
+		if len(dict) == 0 || dict[0] != (Part{}) || m.Bits[i] > 32 || uint64(len(dict)) > uint64(1)<<m.Bits[i] {
 			return nil, errors.New("invalid routing dictionary")
+		}
+		totalBits += int(m.Bits[i])
+	}
+	if totalBits > int(m.Width)*8 {
+		return nil, errors.New("invalid routing bit widths")
+	}
+	townships := map[string]bool{}
+	for i, part := range m.Dicts[0] {
+		if part.Append || (i > 0 && part.Text == "") {
+			return nil, errors.New("invalid routing township entry")
+		}
+		if i > 0 {
+			if townships[part.Text] {
+				return nil, errors.New("duplicate routing township entry")
+			}
+			townships[part.Text] = true
 		}
 	}
 	if string(h[:8]) == "PLSSKEY3" {
@@ -104,7 +131,7 @@ func ReadRoutingPrefixes(r io.ReaderAt, size int64) ([]string, error) {
 			return nil, errors.New("inconsistent routing prefixes")
 		}
 	}
-	return routingPrefixes(m), nil
+	return newIDFilter(m), nil
 }
 
 func equalRoutes(a, b []string) bool {

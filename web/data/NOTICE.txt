@@ -1,0 +1,14 @@
+Offline context map
+
+Made with Natural Earth (https://www.naturalearthdata.com/).
+Natural Earth raster and vector datasets are in the public domain.
+Terms: https://www.naturalearthdata.com/about/terms-of-use/
+
+These files derive from the natural-earth-vector v5.1.2 release. Attributes
+were reduced and state, lake, and place records were selected as documented
+in manifest.json and ../../docs/map-sources.md. Retained coordinates were
+not simplified, rounded, or otherwise changed by this project.
+
+Natural Earth is a generalized context map. It does not establish PLSS
+coverage, ownership, surveyed boundaries, or the accuracy of lookup results.
+The separately loaded BLM atlas supplies the PLSS geometry used for lookup.

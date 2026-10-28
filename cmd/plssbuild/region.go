@@ -79,12 +79,28 @@ func runVerify(args []string, out, log io.Writer) error {
 }
 
 func runWest(args []string, out, log io.Writer) error {
-	fs := flag.NewFlagSet("west", flag.ContinueOnError)
+	return runRegionBuild("west", plss.WesternDownloadStates(), args, out, log)
+}
+
+func runNational(args []string, out, log io.Writer) error {
+	return runRegionBuild("national", append(plss.SupportedDownloadStates(), "ZZ"), args, out, log)
+}
+
+func runRegionBuild(name string, supported []string, args []string, out, log io.Writer) error {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(log)
-	dir := fs.String("work-dir", "data/west", "downloaded source packs and completed state atlases")
-	dest := fs.String("out", "", "new single-file western atlas")
+	defaultDir := "data/west"
+	if name == "national" {
+		defaultDir = "data/us"
+	}
+	dir := fs.String("work-dir", defaultDir, "downloaded source packs and completed state atlases")
+	dest := fs.String("out", "", "new single-file region atlas")
 	workers := fs.Int("workers", 4, "concurrent BLM requests (1-8); states run sequentially")
 	vertices := fs.String("vertices", "packed", "exact vertex storage: packed, raw, or compressed (zlib)")
+	var selected string
+	if name == "national" {
+		fs.StringVar(&selected, "states", "", "optional comma-separated subset for staged builds; ZZ preserves unassigned source IDs")
+	}
 	var overrides values
 	fs.Var(&overrides, "source", "reuse complete source STATE=path.sqlite (repeatable)")
 	if err := fs.Parse(args); err != nil {
@@ -104,10 +120,23 @@ func runWest(args []string, out, log io.Writer) error {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	supported := plss.SupportedDownloadStates()
 	allowed := map[string]bool{}
 	for _, s := range supported {
 		allowed[s] = true
+	}
+	if selected != "" {
+		var subset []string
+		seen := map[string]bool{}
+		for _, s := range strings.Split(selected, ",") {
+			s = strings.ToUpper(strings.TrimSpace(s))
+			if !allowed[s] || seen[s] {
+				return fmt.Errorf("invalid or duplicate --states entry %q", s)
+			}
+			seen[s] = true
+			subset = append(subset, s)
+		}
+		supported = subset
+		allowed = seen
 	}
 	sources := map[string]string{}
 	for _, s := range overrides {
@@ -141,13 +170,23 @@ func runWest(args []string, out, log io.Writer) error {
 			}
 			fmt.Fprintf(log, "%s: downloading source\n", state)
 			last := time.Time{}
-			_, err = plss.DownloadPack(ctx, source, plss.DownloadOptions{State: state, Workers: *workers, Progress: func(p plss.DownloadProgress) {
+			options := plss.DownloadOptions{State: state, Workers: *workers, Progress: func(p plss.DownloadProgress) {
 				if p.Completed == 0 || p.Completed == p.Total || time.Since(last) > 5*time.Second {
 					fmt.Fprintf(log, "%s layer%d: %d / %d\n", state, p.Layer, p.Completed, p.Total)
 					last = time.Now()
 				}
-			}})
+			}}
+			if state == "ZZ" {
+				options.State = ""
+				_, err = plss.DownloadUnassignedPack(ctx, source, options)
+			} else {
+				_, err = plss.DownloadPack(ctx, source, options)
+			}
 			if err != nil {
+				if state == "ZZ" && errors.Is(err, plss.ErrNoPublishedRecords) {
+					fmt.Fprintln(log, "ZZ: source has no unassigned records; no shard needed")
+					continue
+				}
 				return err
 			}
 		} else if err != nil {

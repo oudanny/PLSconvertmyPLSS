@@ -1,3 +1,5 @@
+//go:build !js
+
 package plss
 
 import (
@@ -22,37 +24,6 @@ const packVersion = 1
 const packApplicationID = 0x504c5353 // "PLSS"
 const packBatchSize = 1000
 const maxPackFeatureBytes = 64 << 20
-
-// ErrPackCoverage means a structured description requests a state other than
-// the downloaded pack's state. A missing polygon within that state instead
-// returns ErrNotFound. Neither error causes a network request.
-var ErrPackCoverage = errors.New("requested state is outside this offline pack's coverage")
-
-// ErrNoGeometry means BLM published the requested cadastral record without a
-// polygon. The record remains available for audit, but cannot yield a location.
-var ErrNoGeometry = errors.New("published PLSS record has no polygon geometry")
-
-// PackMetadata records the source and contents of an offline WGS84 pack.
-// Counts counts spatial features and UnlocatedCounts counts source records
-// without geometry, using township, section and intersected keys. Their sum is
-// the source record count. CreatedAt is UTC RFC3339 and refers to the download,
-// not the source's cadastral survey date.
-type PackMetadata struct {
-	Version         int            `json:"version"`
-	State           string         `json:"state"`
-	Source          string         `json:"source"`
-	CreatedAt       string         `json:"created_at"`
-	Counts          map[string]int `json:"counts"`
-	UnlocatedCounts map[string]int `json:"unlocated_counts,omitempty"`
-}
-
-// UnlocatedRecord preserves a source record whose geometry was absent. It is
-// never included in spatial lookup and is not assigned an invented coordinate.
-type UnlocatedRecord struct {
-	Layer      string         `json:"layer"`
-	Attributes map[string]any `json:"attributes"`
-	Reason     string         `json:"reason"`
-}
 
 type packFeature struct {
 	Attributes map[string]any `json:"attributes"`
@@ -214,7 +185,9 @@ func (w *PackWriter) Add(layer int, attrs map[string]any, geometry Geometry) err
 	if layer < 1 || layer > 3 || attrs == nil {
 		return w.fail(errors.New("pack feature requires layer 1–3 and attributes"))
 	}
-	if state := attr(attrs, "STATEABBR"); state != "" && state != w.metadata.State {
+	// ZZ is the national residual partition. Its original STATEABBR may name
+	// any real state even when the PLSSID is absent or malformed.
+	if state := attr(attrs, "STATEABBR"); w.metadata.State != "ZZ" && state != "" && state != w.metadata.State {
 		return w.fail(fmt.Errorf("feature state %s differs from pack state %s", state, w.metadata.State))
 	}
 	point, err := geometry.InteriorPoint()
@@ -274,7 +247,7 @@ func (w *PackWriter) AddUnlocated(layer int, attrs map[string]any) error {
 	if layer < 1 || layer > 3 || attrs == nil {
 		return w.fail(errors.New("unlocated pack record requires layer 1–3 and attributes"))
 	}
-	if state := attr(attrs, "STATEABBR"); state != "" && state != w.metadata.State {
+	if state := attr(attrs, "STATEABBR"); w.metadata.State != "ZZ" && state != "" && state != w.metadata.State {
 		return w.fail(fmt.Errorf("feature state %s differs from pack state %s", state, w.metadata.State))
 	}
 	raw, err := json.Marshal(attrs)

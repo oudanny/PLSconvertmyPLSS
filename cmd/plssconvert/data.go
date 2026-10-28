@@ -21,7 +21,8 @@ const dataUsage = `Manage offline PLSS data packs:
   plssconvert data info --db data/nevada.sqlite [--json]
   plssconvert data unlocated --db data/nevada.sqlite [--json]
 
-Supported states: AZ, CA, CO, ID, MT, NM, NV, OR, UT, WA, WY.
+Supported states: AK, AL, AR, AZ, CA, CO, FL, IA, ID, IL, IN, KS, LA, MI, MN,
+MO, MS, MT, ND, NE, NM, NV, OH, OK, OR, SD, UT, WA, WI, WY.
 Download retrieves the selected state's published townships, sections, and subdivisions
 from BLM and builds a local SQLite spatial index. It requires internet access
 and may take several minutes. Existing output files are never overwritten.

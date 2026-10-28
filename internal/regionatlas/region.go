@@ -207,41 +207,36 @@ func appendShard(ctx context.Context, out *os.File, input ShardInput) (Shard, er
 }
 
 func validateCounts(a *atlas.Reader) error {
+	return validateMetadataCounts(a.Manifest.Source, a.Keys.LayerCounts(), a.Manifest.Unlocated)
+}
+
+func validateMetadataCounts(source plss.PackMetadata, layers [3]uint32, audit []plss.UnlocatedRecord) error {
 	names := []string{"township", "section", "intersected"}
 	known := func(name string) bool { return name == "township" || name == "section" || name == "intersected" }
-	for name, n := range a.Manifest.Source.Counts {
+	for name, n := range source.Counts {
 		if !known(name) || n < 0 {
 			return errors.New("invalid source layer count")
 		}
 	}
-	for name, n := range a.Manifest.Source.UnlocatedCounts {
+	for name, n := range source.UnlocatedCounts {
 		if !known(name) || n < 0 {
 			return errors.New("invalid unlocated layer count")
 		}
 	}
-	var total uint32
 	for i, name := range names {
-		n := uint64(a.Manifest.Source.Counts[name])
-		if n > uint64(a.Keys.Count()-total) {
-			return errors.New("source feature count disagrees with atlas")
+		if uint64(source.Counts[name]) != uint64(layers[i]) {
+			return errors.New("source layer count disagrees with key header")
 		}
-		if n > 0 && (a.Keys.Layer(total+1) != uint8(i+1) || a.Keys.Layer(total+uint32(n)) != uint8(i+1)) {
-			return errors.New("source layer counts disagree with key index")
-		}
-		total += uint32(n)
-	}
-	if total != a.Keys.Count() {
-		return errors.New("source feature count disagrees with atlas")
 	}
 	counts := map[string]int{}
-	for _, record := range a.Manifest.Unlocated {
+	for _, record := range audit {
 		if !known(record.Layer) {
 			return errors.New("unknown unlocated layer")
 		}
 		counts[record.Layer]++
 	}
 	for _, name := range names {
-		if counts[name] != a.Manifest.Source.UnlocatedCounts[name] {
+		if counts[name] != source.UnlocatedCounts[name] {
 			return errors.New("unlocated source count disagrees with audit records")
 		}
 	}
@@ -283,6 +278,8 @@ type Reader struct {
 	manifest   Manifest
 	standalone bool
 	byState    map[string]int
+	filters    map[int]*keyindex.IDFilter
+	audits     map[int][]plss.UnlocatedRecord
 	cacheMu    sync.Mutex
 	cache      map[int]*cached
 	changed    chan struct{}
@@ -298,24 +295,19 @@ func OpenMapped(path string) (*Reader, error) { return OpenWithOptions(path, Opt
 // Opening validates routing/header integrity and independent index extents;
 // full component SHA256 verification remains an explicit Verify operation.
 func OpenWithOptions(path string, options Options) (*Reader, error) {
-	if options.MaxOpenShards == 0 {
-		options.MaxOpenShards = maxShards
-	}
-	if options.MaxOpenShards < 1 || options.MaxOpenShards > maxShards {
-		return nil, errors.New("MaxOpenShards must be 1–64")
+	r, err := newReader(options)
+	if err != nil {
+		return nil, err
 	}
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	r := &Reader{file: f, source: f, cache: map[int]*cached{}, byState: map[string]int{}, changed: make(chan struct{}), maxOpen: options.MaxOpenShards}
+	r.file, r.source = f, f
 	fail := func(err error) (*Reader, error) { _ = r.Close(); return nil, err }
 	info, err := f.Stat()
 	if err != nil {
 		return fail(err)
-	}
-	if info.Size() < headerSize {
-		return fail(errors.New("truncated atlas or region header"))
 	}
 	if !options.Buffered {
 		r.mapping, err = mappedfile.FromFile(f)
@@ -324,87 +316,141 @@ func OpenWithOptions(path string, options Options) (*Reader, error) {
 		}
 		r.source = bytes.NewReader(r.mapping.Bytes)
 	}
-	h := make([]byte, headerSize)
-	if _, err := r.source.ReadAt(h, 0); err != nil {
+	if err := r.initialize(info.Size()); err != nil {
 		return fail(err)
 	}
+	return r, nil
+}
+
+// OpenReaderAt borrows an immutable random-access source. It never closes the
+// source or maps/copies the whole container. Individual state indexes are read
+// on demand and bounded by MaxOpenShards; geometry blocks have bounded caches.
+// The caller must keep the source available until Close returns. Offsets and
+// total file size use int64, independently of the host's pointer width.
+func OpenReaderAt(source io.ReaderAt, size int64, options Options) (*Reader, error) {
+	if source == nil {
+		return nil, errors.New("nil atlas source")
+	}
+	r, err := newReader(options)
+	if err != nil {
+		return nil, err
+	}
+	r.source = source
+	if err := r.initialize(size); err != nil {
+		_ = r.Close()
+		return nil, err
+	}
+	return r, nil
+}
+
+func newReader(options Options) (*Reader, error) {
+	if options.MaxOpenShards == 0 {
+		options.MaxOpenShards = maxShards
+	}
+	if options.MaxOpenShards < 1 || options.MaxOpenShards > maxShards {
+		return nil, errors.New("MaxOpenShards must be 1-64")
+	}
+	return &Reader{cache: map[int]*cached{}, byState: map[string]int{}, filters: map[int]*keyindex.IDFilter{}, audits: map[int][]plss.UnlocatedRecord{}, changed: make(chan struct{}), maxOpen: options.MaxOpenShards}, nil
+}
+
+func (r *Reader) initialize(size int64) error {
+	if size < headerSize {
+		return errors.New("truncated atlas or region header")
+	}
+	h := make([]byte, headerSize)
+	if _, err := r.source.ReadAt(h, 0); err != nil {
+		return err
+	}
 	if string(h[:8]) == "PLSSATL1" {
-		m, err := atlas.ReadManifest(r.source, info.Size())
+		m, err := atlas.ReadManifest(r.source, size)
 		if err != nil {
-			return fail(err)
+			return err
 		}
 		bounds, has, err := atlas.ReadBounds(r.source, m)
 		if err != nil {
-			return fail(err)
+			return err
 		}
+		keys := m.Sections["keys"]
+		filter, err := keyindex.ReadIDFilter(io.NewSectionReader(r.source, keys.Offset, keys.Size), keys.Size)
+		if err != nil {
+			return err
+		}
+		if err := validateMetadataCounts(m.Source, filter.LayerCounts(), m.Unlocated); err != nil {
+			return err
+		}
+		r.filters[0], r.audits[0] = filter, m.Unlocated
 		r.standalone = true
-		r.manifest = Manifest{Format: "PLSSATL1", Shards: []Shard{{State: m.Source.State, Bounds: bounds, HasGeometry: has, Prefixes: []string{"*"}, Section: atlas.Section{Size: info.Size()}, Source: m.Source, SourceSHA256: m.SourceSHA256}}}
+		r.manifest = Manifest{Format: "PLSSATL1", Shards: []Shard{{State: m.Source.State, Bounds: bounds, HasGeometry: has, Prefixes: []string{"*"}, Section: atlas.Section{Size: size}, Source: m.Source, SourceSHA256: m.SourceSHA256}}}
 	} else {
 		if string(h[:8]) != magic {
-			return fail(errors.New("not a completed atlas or region bundle"))
+			return errors.New("not a completed atlas or region bundle")
 		}
 		length := binary.LittleEndian.Uint32(h[8:12])
 		if length == 0 || length > headerSize-44 {
-			return fail(errors.New("invalid region manifest length"))
+			return errors.New("invalid region manifest length")
 		}
 		n := int(length)
 		doc := h[44 : 44+n]
 		digest := sha256.Sum256(doc)
 		if !bytes.Equal(h[12:44], digest[:]) {
-			return fail(errors.New("region manifest checksum mismatch"))
+			return errors.New("region manifest checksum mismatch")
 		}
 		if err := json.Unmarshal(doc, &r.manifest); err != nil {
-			return fail(err)
+			return err
 		}
 		if r.manifest.Format != magic || len(r.manifest.Shards) == 0 || len(r.manifest.Shards) > maxShards {
-			return fail(errors.New("invalid region format or shard count"))
+			return errors.New("invalid region format or shard count")
 		}
 		last := int64(headerSize)
-		for _, s := range r.manifest.Shards {
-			if !stateValid(s.State) || s.Source.State != s.State || s.Section.Offset != last || s.Section.Size < headerSize || s.Section.Size > info.Size()-last {
-				return fail(errors.New("invalid state shard directory"))
+		for shardIndex, s := range r.manifest.Shards {
+			if !stateValid(s.State) || s.Source.State != s.State || s.Section.Offset != last || s.Section.Size < headerSize || s.Section.Size > size-last {
+				return errors.New("invalid state shard directory")
 			}
 			if hash, e := hex.DecodeString(s.Section.SHA256); e != nil || len(hash) != sha256.Size {
-				return fail(errors.New("invalid shard checksum"))
+				return errors.New("invalid shard checksum")
 			}
 			for i, p := range s.Prefixes {
 				if (p != "*" && !stateValid(p)) || (i > 0 && p <= s.Prefixes[i-1]) {
-					return fail(errors.New("invalid shard ID routes"))
+					return errors.New("invalid shard ID routes")
 				}
 			}
 			section := io.NewSectionReader(r.source, s.Section.Offset, s.Section.Size)
 			m, e := atlas.ReadManifest(section, s.Section.Size)
 			if e != nil {
-				return fail(e)
+				return e
 			}
 			bounds, has, e := atlas.ReadBounds(section, m)
 			if e != nil {
-				return fail(e)
+				return e
 			}
 			if !reflect.DeepEqual(m.Source, s.Source) || m.SourceSHA256 != s.SourceSHA256 || bounds != s.Bounds || has != s.HasGeometry {
-				return fail(errors.New("shard provenance or extent disagrees with region manifest"))
+				return errors.New("shard provenance or extent disagrees with region manifest")
 			}
 			keys := m.Sections["keys"]
-			routes, e := keyindex.ReadRoutingPrefixes(io.NewSectionReader(section, keys.Offset, keys.Size), keys.Size)
+			filter, e := keyindex.ReadIDFilter(io.NewSectionReader(section, keys.Offset, keys.Size), keys.Size)
 			if e != nil {
-				return fail(e)
+				return e
 			}
-			if !reflect.DeepEqual(auditPrefixes(routes, m.Unlocated), s.Prefixes) {
-				return fail(errors.New("shard ID routes disagree with key index"))
+			if !reflect.DeepEqual(auditPrefixes(filter.Prefixes(), m.Unlocated), s.Prefixes) {
+				return errors.New("shard ID routes disagree with key index")
 			}
+			if err := validateMetadataCounts(m.Source, filter.LayerCounts(), m.Unlocated); err != nil {
+				return err
+			}
+			r.filters[shardIndex], r.audits[shardIndex] = filter, m.Unlocated
 			last += s.Section.Size
 		}
-		if last != info.Size() {
-			return fail(errors.New("unexpected region file length"))
+		if last != size {
+			return errors.New("unexpected region file length")
 		}
 	}
 	for i, s := range r.manifest.Shards {
 		if _, ok := r.byState[s.State]; ok {
-			return fail(errors.New("duplicate region state"))
+			return errors.New("duplicate region state")
 		}
 		r.byState[s.State] = i
 	}
-	return r, nil
+	return nil
 }
 
 // acquire is called with the lifetime read lock held. Idle readers can be
@@ -491,6 +537,8 @@ func (r *Reader) Close() error {
 		errs = append(errs, c.reader.Close())
 	}
 	r.cache = nil
+	r.filters = nil
+	r.audits = nil
 	if r.mapping != nil {
 		errs = append(errs, r.mapping.Close())
 	}
@@ -573,6 +621,12 @@ func (r *Reader) FindID(kind, id string) ([]Hit, error) {
 		if prefix != "*" && !contains(s.Prefixes, prefix) && !contains(s.Prefixes, "*") {
 			continue
 		}
+		if auditHasID(r.audits[i], kind, id) {
+			unlocated = true
+		}
+		if filter := r.filters[i]; filter != nil && !filter.MayContain(kind, id) {
+			continue
+		}
 		a, done, err := r.acquire(context.Background(), i)
 		if err != nil {
 			return nil, err
@@ -600,6 +654,17 @@ func (r *Reader) FindID(kind, id string) ([]Hit, error) {
 		return nil, fmt.Errorf("%w: %s", plss.ErrNoGeometry, id)
 	}
 	return nil, plss.ErrNotFound
+}
+
+func auditHasID(records []plss.UnlocatedRecord, kind, id string) bool {
+	field := map[string]string{"township": "PLSSID", "section": "FRSTDIVID", "division": "SECDIVID", "intersected": "SECDIVID", "survey": "SURVID"}[kind]
+	layer := map[string]string{"township": "township", "section": "section", "division": "intersected", "intersected": "intersected", "survey": "intersected"}[kind]
+	for _, record := range records {
+		if record.Layer == layer && record.Attributes[field] == id {
+			return true
+		}
+	}
+	return false
 }
 func contains(items []string, s string) bool {
 	i := sort.SearchStrings(items, s)

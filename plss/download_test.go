@@ -362,7 +362,7 @@ func TestDownloadServiceErrorsAndOptions(t *testing.T) {
 }
 
 func TestSupportedDownloadStatesAreIndependent(t *testing.T) {
-	want := []string{"AZ", "CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY"}
+	want := []string{"AK", "AL", "AR", "AZ", "CA", "CO", "FL", "IA", "ID", "IL", "IN", "KS", "LA", "MI", "MN", "MO", "MS", "MT", "ND", "NE", "NM", "NV", "OH", "OK", "OR", "SD", "UT", "WA", "WI", "WY"}
 	states := SupportedDownloadStates()
 	if !reflect.DeepEqual(states, want) {
 		t.Fatalf("supported states: %v", states)
@@ -374,7 +374,7 @@ func TestSupportedDownloadStatesAreIndependent(t *testing.T) {
 	var calls atomic.Int32
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { calls.Add(1) }))
 	defer s.Close()
-	for _, state := range []string{"TX", "AK", "HI", "NV' OR 1=1 --", "N_V", "N%", "N V"} {
+	for _, state := range []string{"TX", "ZZ", "HI", "NV' OR 1=1 --", "N_V", "N%", "N V"} {
 		_, err := DownloadPack(context.Background(), filepath.Join(t.TempDir(), "state.sqlite"), DownloadOptions{State: state, BaseURL: s.URL, HTTPClient: s.Client()})
 		if err == nil || !strings.Contains(err.Error(), "unsupported download state") {
 			t.Errorf("accepted invalid state %q: %v", state, err)
@@ -385,7 +385,82 @@ func TestSupportedDownloadStatesAreIndependent(t *testing.T) {
 	}
 }
 
-func TestDownloadWesternStatesWithEmptyLayers(t *testing.T) {
+func TestDownloadUnassignedPreservesSourceStateAndMissingIDs(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			t.Error(err)
+			return
+		}
+		var layer int
+		fmt.Sscanf(r.URL.Path, "/%d/query", &layer)
+		if r.Form.Get("returnIdsOnly") == "true" {
+			where := r.Form.Get("where")
+			if !strings.HasPrefix(where, "PLSSID IS NULL OR NOT (") || !strings.HasSuffix(where, ")") {
+				t.Errorf("noncomplement residual filter: %s", where)
+			}
+			for _, state := range SupportedDownloadStates() {
+				if strings.Count(where, "PLSSID LIKE '"+state+"%'") != 1 {
+					t.Errorf("missing or duplicate state %s", state)
+				}
+			}
+			ids := []int64{}
+			if layer == 3 {
+				ids = []int64{1}
+			}
+			json.NewEncoder(w).Encode(map[string]any{"objectIdFieldName": "OBJECTID", "objectIds": ids})
+			return
+		}
+		feature := downloadTestFeature(1)
+		attrs := feature["attributes"].(map[string]any)
+		attrs["PLSSID"] = nil
+		attrs["SECDIVID"] = "unassigned-original-id"
+		json.NewEncoder(w).Encode(map[string]any{"features": []any{feature}})
+	}))
+	defer s.Close()
+	path := filepath.Join(t.TempDir(), "unassigned.sqlite")
+	meta, err := DownloadUnassignedPack(context.Background(), path, DownloadOptions{BaseURL: s.URL, HTTPClient: s.Client()})
+	if err != nil || meta.State != "ZZ" {
+		t.Fatalf("%+v %v", meta, err)
+	}
+	p, err := OpenPack(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	hits, err := p.Lookup(context.Background(), 39.005, -115.995)
+	if err != nil || len(hits) != 1 || hits[0].Attribute("STATEABBR") != "NV" || hits[0].Attribute("PLSSID") != "" {
+		t.Fatalf("%+v %v", hits, err)
+	}
+	if _, err := DownloadUnassignedPack(context.Background(), "unused", DownloadOptions{State: "NV"}); err == nil {
+		t.Fatal("accepted state for unassigned selection")
+	}
+}
+
+func TestUnassignedPackRetainsUnlocatedOriginalState(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "unassigned.sqlite")
+	w, err := CreatePack(path, PackMetadata{State: "ZZ"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer w.Close()
+	if err = w.AddUnlocated(3, map[string]any{"STATEABBR": "AK", "PLSSID": nil, "SECDIVID": "original"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = w.Finish(); err != nil {
+		t.Fatal(err)
+	}
+	p, err := OpenPack(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	records, err := p.Unlocated(context.Background())
+	if err != nil || len(records) != 1 || records[0].Attributes["STATEABBR"] != "AK" {
+		t.Fatalf("%+v %v", records, err)
+	}
+}
+
+func TestDownloadSupportedStatesWithEmptyLayers(t *testing.T) {
 	for index, state := range SupportedDownloadStates() {
 		t.Run(state, func(t *testing.T) {
 			// Rotate the populated layer so both empty parents and empty
@@ -485,6 +560,46 @@ func TestDownloadSnapshotDistinguishesEmptyFromMalformed(t *testing.T) {
 	}
 }
 
+func TestResidualNullIDsRequireIndependentZeroCount(t *testing.T) {
+	for _, tc := range []struct {
+		name, ids, count string
+		valid            bool
+	}{
+		{"confirmed_empty", `{"objectIdFieldName":"OBJECTID","objectIds":null}`, `{"count":0}`, true},
+		{"nonempty", `{"objectIdFieldName":"OBJECTID","objectIds":null}`, `{"count":1}`, false},
+		{"missing_count", `{"objectIdFieldName":"OBJECTID","objectIds":null}`, `{}`, false},
+		{"null_count", `{"objectIdFieldName":"OBJECTID","objectIds":null}`, `{"count":null}`, false},
+		{"truncated_count", `{"objectIdFieldName":"OBJECTID","objectIds":null}`, `{"count":0,"exceededTransferLimit":true}`, false},
+		{"missing_ids", `{"objectIdFieldName":"OBJECTID"}`, `{"count":0}`, false},
+		{"missing_field", `{"objectIds":null}`, `{"count":0}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var where string
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				r.ParseForm()
+				if r.Form.Get("returnIdsOnly") == "true" {
+					where = r.Form.Get("where")
+					w.Write([]byte(tc.ids))
+					return
+				}
+				if r.Form.Get("returnCountOnly") != "true" || where == "" || where != r.Form.Get("where") {
+					t.Errorf("wrong confirmation query: %v", r.Form)
+				}
+				w.Write([]byte(tc.count))
+			}))
+			defer s.Close()
+			d := packDownloader{base: s.URL, http: s.Client()}
+			snapshot, err := d.snapshot(context.Background(), 1, "ZZ")
+			if (err == nil) != tc.valid {
+				t.Fatalf("%+v %v", snapshot, err)
+			}
+			if tc.valid && len(snapshot.ids) != 0 {
+				t.Fatal(snapshot)
+			}
+		})
+	}
+}
+
 func TestDownloadEntirelyEmptyStateDoesNotPublish(t *testing.T) {
 	var calls atomic.Int32
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -499,7 +614,7 @@ func TestDownloadEntirelyEmptyStateDoesNotPublish(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "state.sqlite")
 	_, err := DownloadPack(context.Background(), path, DownloadOptions{State: "WA", BaseURL: s.URL, HTTPClient: s.Client()})
-	if err == nil || !strings.Contains(err.Error(), "no published records for WA") || calls.Load() != 3 {
+	if !errors.Is(err, ErrNoPublishedRecords) || !strings.Contains(err.Error(), "no published records for WA") || calls.Load() != 3 {
 		t.Fatalf("entirely empty state: %v calls=%d", err, calls.Load())
 	}
 	entries, err := os.ReadDir(dir)

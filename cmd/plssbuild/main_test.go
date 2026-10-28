@@ -20,7 +20,11 @@ func makeSource(t *testing.T, path, state string) {
 	}
 	defer w.Close()
 	g := plss.Geometry{Rings: [][][]float64{{{-120, 40}, {-119, 40}, {-119, 41}, {-120, 41}, {-120, 40}}}}
-	if err = w.Add(3, map[string]any{"STATEABBR": state, "PLSSID": state + "town", "FRSTDIVID": state + "townsection", "SECDIVID": state + "townsectiondivision"}, g); err != nil {
+	attrs := map[string]any{"STATEABBR": state, "PLSSID": state + "town", "FRSTDIVID": state + "townsection", "SECDIVID": state + "townsectiondivision"}
+	if state == "ZZ" {
+		attrs = map[string]any{"STATEABBR": "AK", "PLSSID": nil, "FRSTDIVID": "", "SECDIVID": "", "SURVID": "original-survey"}
+	}
+	if err = w.Add(3, attrs, g); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = w.Finish(); err != nil {
@@ -30,7 +34,7 @@ func makeSource(t *testing.T, path, state string) {
 
 func TestWesternBuildResumeAndVerifyWithoutNetwork(t *testing.T) {
 	dir := t.TempDir()
-	for _, state := range plss.SupportedDownloadStates() {
+	for _, state := range plss.WesternDownloadStates() {
 		makeSource(t, filepath.Join(dir, strings.ToLower(state)+".sqlite"), state)
 	}
 	out := filepath.Join(dir, "west.atlas")
@@ -81,11 +85,43 @@ func TestBuilderRejectsInvalidFlagsBeforeNetwork(t *testing.T) {
 		{"west", "--out", "x", "--source", "TX=some.sqlite"},
 		{"west", "--out", "x", "--source", "WA=a", "--source", "WA=b"},
 		{"west", "--out", "x", "--workers", "9"},
+		{"national", "--out", "x", "--states", "AK,TX"},
+		{"national", "--out", "x", "--states", "AK,AK"},
+		{"national", "--out", "x", "--states", "AK", "--source", "NV=x"},
 		{"bundle", "--out", "x"},
 	} {
 		var output bytes.Buffer
 		if err := run(args, &output, &output); err == nil {
 			t.Fatalf("accepted %v", args)
 		}
+	}
+}
+
+func TestNationalBuildAllPublishedStatesAndUnassigned(t *testing.T) {
+	dir := t.TempDir()
+	states := append(plss.SupportedDownloadStates(), "ZZ")
+	for _, state := range states {
+		makeSource(t, filepath.Join(dir, strings.ToLower(state)+".sqlite"), state)
+	}
+	path := filepath.Join(dir, "us.atlas")
+	var out bytes.Buffer
+	if err := run([]string{"national", "--work-dir", dir, "--out", path}, &out, &out); err != nil {
+		t.Fatal(err)
+	}
+	r, err := regionatlas.OpenMapped(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	if err := r.Verify(); err != nil {
+		t.Fatal(err)
+	}
+	hits, err := r.Lookup(context.Background(), 40.5, -119.5)
+	if err != nil || len(hits) != 31 {
+		t.Fatalf("%v %v", hits, err)
+	}
+	// Subsets can be built independently using the same completed state files.
+	if err := run([]string{"national", "--work-dir", dir, "--out", filepath.Join(dir, "ak-zz.atlas"), "--states", "ak,ZZ"}, &out, &out); err != nil {
+		t.Fatal(err)
 	}
 }

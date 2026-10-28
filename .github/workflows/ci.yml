@@ -27,14 +27,93 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
           cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      # These run before asset generation: a source checkout must remain usable
+      # for CLI/library development without a precompiled WASM binary.
       - name: Test
         run: go test ./...
       - name: Vet
         run: go vet ./...
       - name: Build
         run: go build ./cmd/...
+      - name: Test map geometry and JavaScript syntax
+        run: |
+          node --test web/geometry.test.cjs
+          node --check web/app.js
+          node --check web/worker.js
+      - name: Build Go WebAssembly and portable GUI
+        run: go run ./internal/guibuild
+      - name: Smoke test WASM and local GUI without a browser
+        shell: bash
+        run: |
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const vm = require('node:vm');
+          const path = require('node:path');
+          const { spawn } = require('node:child_process');
+          globalThis.crypto ??= require('node:crypto').webcrypto;
+          let child;
+          async function smoke() {
+            vm.runInThisContext(fs.readFileSync('web/runtime/wasm_exec.js', 'utf8'));
+            const go = new Go();
+            const { instance } = await WebAssembly.instantiate(fs.readFileSync('web/runtime/plss.wasm'), go.importObject);
+            void go.run(instance).catch(error => { console.error(error); process.exit(1); });
+            await new Promise(setImmediate);
+            const converted = JSON.parse(globalThis.plssEngine('convert', JSON.stringify({value:'39.5296,-119.8138'})));
+            assert.equal(converted.ok, true, converted.error);
+            assert.equal(converted.result.coordinates.utm.zone, 11);
+            assert.equal(converted.result.coordinates.latitude, 39.5296);
+            assert.equal(JSON.parse(globalThis.plssEngine('lookup', '{}')).ok, false);
+            const executable = path.resolve('bin', process.platform === 'win32' ? 'plssmap.exe' : 'plssmap');
+            child = spawn(executable, ['--no-browser', '--listen', '127.0.0.1:0'], {windowsHide:true});
+            let output = '', errors = '';
+            child.stderr.on('data', chunk => { errors += chunk; });
+            const address = await new Promise((resolve, reject) => {
+              const timer = setTimeout(() => reject(new Error('Launcher did not start: ' + errors)), 20000);
+              child.once('error', error => { clearTimeout(timer); reject(error); });
+              child.once('exit', code => { clearTimeout(timer); reject(new Error('Launcher exited ' + code + ': ' + errors)); });
+              child.stdout.on('data', chunk => {
+                output += chunk;
+                const found = output.match(/http:\/\/127\.0\.0\.1:\d+/);
+                if (found) { clearTimeout(timer); resolve(found[0]); }
+              });
+            });
+            const page = await fetch(address);
+            assert.equal(page.status, 200);
+            assert.match(await page.text(), /id="map"/);
+            const config = await (await fetch(address + '/api/config')).json();
+            assert.equal(config.engine, 'Go WebAssembly');
+            assert.equal(config.atlas, null);
+            const wasm = await fetch(address + '/runtime/plss.wasm', {headers:{Range:'bytes=0-7'}});
+            assert.equal(wasm.status, 206);
+            assert.equal(wasm.headers.get('content-type'), 'application/wasm');
+            assert.equal(Buffer.from(await wasm.arrayBuffer()).toString('hex'), '0061736d01000000');
+            const map = await (await fetch(address + '/data/states.geojson')).json();
+            assert.equal(map.features.length, 51);
+            const missing = await fetch(address + '/atlas');
+            assert.equal(missing.status, 404);
+            await missing.arrayBuffer();
+            console.log('WASM conversion and embedded GUI HTTP smoke passed.');
+          }
+          (async () => {
+            let code = 0;
+            try { await smoke(); } catch (error) { console.error(error); code = 1; }
+            finally {
+              if (child && child.pid && child.exitCode === null && child.signalCode === null) {
+                const stopped = new Promise(resolve => child.once('close', resolve));
+                child.kill();
+                await stopped;
+              }
+            }
+            process.exitCode = code;
+          })();
+          NODE
       - name: Race check compact readers
         if: matrix.os == 'ubuntu-latest' && matrix.go == 'stable'
         env:
           CGO_ENABLED: '1'
-        run: go test -race ./internal/atlas ./internal/columns ./internal/compactgeom ./internal/keyindex ./internal/spatialindex ./internal/regionatlas ./internal/preparedgeom ./offline
+        run: go test -race ./internal/atlas ./internal/columns ./internal/compactgeom ./internal/keyindex ./internal/spatialindex ./internal/regionatlas ./internal/preparedgeom ./internal/readcache ./internal/mapengine ./internal/mapserver ./offline

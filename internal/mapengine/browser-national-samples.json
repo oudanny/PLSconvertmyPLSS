@@ -1,0 +1,100 @@
+{
+  "note": "Single-run observed browser samples; warm OS pages, not a statistical latency benchmark. Engine elapsed_ms excludes bridge serialization; worker_label includes it where captured. Go heap is not browser RSS. File selection occurred after range tests in the same worker, so old allocations may await GC.",
+  "atlas": "us.atlas",
+  "mode": "Browser worker, same-origin loopback byte ranges",
+  "open": {
+    "read_calls": 104,
+    "bytes_read": 54525952,
+    "max_read_bytes": 524288,
+    "cache_hits": 64,
+    "cache_bytes": 8388608,
+    "go_heap_bytes": 42960936,
+    "elapsed_ms": 732.100096
+  },
+  "firstReno": {
+    "read_calls": 126,
+    "bytes_read": 96117879,
+    "max_read_bytes": 8388608,
+    "cache_hits": 86,
+    "cache_bytes": 8261975,
+    "go_heap_bytes": 68384928,
+    "elapsed_ms": 476.89984,
+    "worker_label": "478 ms"
+  },
+  "repeatedReno": {
+    "read_calls": 126,
+    "bytes_read": 96117879,
+    "max_read_bytes": 8388608,
+    "cache_hits": 95,
+    "cache_bytes": 8261975,
+    "go_heap_bytes": 60571568,
+    "elapsed_ms": 0.599808,
+    "worker_label": "700 µs"
+  },
+  "reverseReno": {
+    "read_calls": 126,
+    "bytes_read": 96117879,
+    "max_read_bytes": 8388608,
+    "cache_hits": 95,
+    "cache_bytes": 8261975,
+    "go_heap_bytes": 60578040,
+    "elapsed_ms": 1.900032,
+    "worker_label": "2.2 ms"
+  },
+  "fileMode": {
+    "open": {
+      "read_calls": 161,
+      "bytes_read": 12345093,
+      "max_read_bytes": 549006,
+      "cache_hits": 49,
+      "cache_bytes": 8388608,
+      "go_heap_bytes": 112802704,
+      "elapsed_ms": 425.999872
+    },
+    "firstReno": {
+      "read_calls": 222,
+      "bytes_read": 48649070,
+      "max_read_bytes": 1048576,
+      "cache_hits": 70,
+      "cache_bytes": 8327511,
+      "go_heap_bytes": 125576864,
+      "elapsed_ms": 170.20032
+    },
+    "repeatedReno": {
+      "read_calls": 222,
+      "bytes_read": 48649070,
+      "max_read_bytes": 1048576,
+      "cache_hits": 79,
+      "cache_bytes": 8327511,
+      "go_heap_bytes": 125585416,
+      "elapsed_ms": 0.399872
+    },
+    "firstOverlap": {
+      "read_calls": 244,
+      "bytes_read": 59240010,
+      "max_read_bytes": 1048576,
+      "cache_hits": 82,
+      "cache_bytes": 8327511,
+      "go_heap_bytes": 139863208,
+      "elapsed_ms": 68.60032
+    },
+    "repeatedOverlap": {
+      "read_calls": 244,
+      "bytes_read": 59240010,
+      "max_read_bytes": 1048576,
+      "cache_hits": 86,
+      "cache_bytes": 8327511,
+      "go_heap_bytes": 67118392,
+      "elapsed_ms": 0.499968
+    },
+    "returnReno": {
+      "read_calls": 244,
+      "bytes_read": 59240010,
+      "max_read_bytes": 1048576,
+      "cache_hits": 95,
+      "cache_bytes": 8327511,
+      "go_heap_bytes": 67127440,
+      "elapsed_ms": 0.799744
+    }
+  }
+}

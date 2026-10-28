@@ -1,0 +1,221 @@
+{
+  "source": "https://gis.blm.gov/natlplss/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+  "queried_at": "2026-10-28T00:20:19.8572033Z",
+  "grouping": "SUBSTRING(PLSSID,1,2)",
+  "layer_totals": {
+    "2": 2773890,
+    "3": 27366361,
+    "1": 85984
+  },
+  "total_records": 30226235.0,
+  "states": [
+    {
+      "state": "AK",
+      "township": 18339,
+      "intersected": 711051,
+      "section": 512701
+    },
+    {
+      "state": "AL",
+      "township": 1541,
+      "intersected": 134124,
+      "section": 52306
+    },
+    {
+      "state": "AR",
+      "township": 1584,
+      "intersected": 534809,
+      "section": 54804
+    },
+    {
+      "state": "AZ",
+      "township": 3413,
+      "intersected": 1422750,
+      "section": 116188
+    },
+    {
+      "state": "CA",
+      "township": 4714,
+      "intersected": 2134676,
+      "section": 141935
+    },
+    {
+      "state": "CO",
+      "township": 3058,
+      "intersected": 1960493,
+      "section": 104083
+    },
+    {
+      "state": "FL",
+      "township": 1731,
+      "intersected": 153371,
+      "section": 51028
+    },
+    {
+      "state": "IA",
+      "township": 1640,
+      "intersected": 890563,
+      "section": 56734
+    },
+    {
+      "state": "ID",
+      "township": 2497,
+      "intersected": 1161438,
+      "section": 85877
+    },
+    {
+      "state": "IL",
+      "township": 1748,
+      "intersected": 93603,
+      "section": 56845
+    },
+    {
+      "state": "IN",
+      "township": 1103,
+      "intersected": 67991,
+      "section": 36340
+    },
+    {
+      "state": "KS",
+      "township": 2360,
+      "intersected": 98883,
+      "section": 82466
+    },
+    {
+      "state": "LA",
+      "township": 1432,
+      "intersected": 111247,
+      "section": 41342
+    },
+    {
+      "state": "MI",
+      "township": 1916,
+      "intersected": 920351,
+      "section": 59975
+    },
+    {
+      "state": "MN",
+      "township": 2542,
+      "intersected": 1298011,
+      "section": 84531
+    },
+    {
+      "state": "MO",
+      "township": 2022,
+      "intersected": 163110,
+      "section": 67535
+    },
+    {
+      "state": "MS",
+      "township": 1550,
+      "intersected": 710095,
+      "section": 49793
+    },
+    {
+      "state": "MT",
+      "township": 4191,
+      "intersected": 2271831,
+      "section": 149176
+    },
+    {
+      "state": "ND",
+      "township": 2067,
+      "intersected": 1131664,
+      "section": 71486
+    },
+    {
+      "state": "NE",
+      "township": 2243,
+      "intersected": 124147,
+      "section": 78136
+    },
+    {
+      "state": "NM",
+      "township": 3299,
+      "intersected": 1746480,
+      "section": 110237
+    },
+    {
+      "state": "NV",
+      "township": 3380,
+      "intersected": 1394970,
+      "section": 112133
+    },
+    {
+      "state": "OH",
+      "township": 1006,
+      "intersected": 73217,
+      "section": 29140
+    },
+    {
+      "state": "OK",
+      "township": 2078,
+      "intersected": 1139388,
+      "section": 70926
+    },
+    {
+      "state": "OR",
+      "township": 2940,
+      "intersected": 1472085,
+      "section": 104015
+    },
+    {
+      "state": "SD",
+      "township": 2339,
+      "intersected": 1255781,
+      "section": 78451
+    },
+    {
+      "state": "UT",
+      "township": 2566,
+      "intersected": 1228213,
+      "section": 84754
+    },
+    {
+      "state": "WA",
+      "township": 2108,
+      "intersected": 554241,
+      "section": 74774
+    },
+    {
+      "state": "WI",
+      "township": 1687,
+      "intersected": 878687,
+      "section": 57368
+    },
+    {
+      "state": "WY",
+      "township": 2890,
+      "intersected": 1462426,
+      "section": 98808
+    }
+  ],
+  "unassigned_prefixes": [
+    {
+      "prefix": "z",
+      "records": 1,
+      "layer": 2
+    },
+    {
+      "prefix": null,
+      "records": 2,
+      "layer": 2
+    },
+    {
+      "prefix": "",
+      "records": 2605,
+      "layer": 3
+    },
+    {
+      "prefix": "<N",
+      "records": 2,
+      "layer": 3
+    },
+    {
+      "prefix": null,
+      "records": 64058,
+      "layer": 3
+    }
+  ],
+  "note": "Source count inventory, not completed download or geometry counts. State LIKE filters and their exact complement partition the complete published layers. ZZ is an unassigned-source shard, not a state."
+}

@@ -29,4 +29,11 @@ The reader preserves overlapping records and uses a global subdivision → secti
 
 The default maps the file once and lazily retains requested states. `OpenWithOptions(path, offline.Options{Buffered: true, LazyStateCache: 3})` uses ordinary reads and caps initialized states, at the cost of reopening evicted states. Concurrent calls are supported; `Close` waits for them. Returned data remains usable after closing. Keep the source file unchanged while open.
 
+`OpenReaderAt(source, size, offline.Options{LazyStateCache: 2})` accepts an
+immutable `io.ReaderAt`, including a bounded browser file adapter. It borrows the
+source without closing it or copying the entire atlas. State indexes initialize
+on demand; only the configured number remain cached. File sizes and offsets are
+`int64`, so the container does not have to fit in a Go byte slice. The browser
+worker adapter is documented in [`cmd/plsswasm`](../cmd/plsswasm/README.md).
+
 The file format is experimental. Structured PLSS-description search is not yet exposed through this reader; it does not implement `plss.Provider`.
